@@ -5,8 +5,6 @@ from sklearn.decomposition import PCA, FastICA
 from poloniex_API import poloniex
 from API_settings import API_secret, API_key
 
-from matplotlib import pyplot as plt
-
 SEC_IN_DAY = 86400
 
 
