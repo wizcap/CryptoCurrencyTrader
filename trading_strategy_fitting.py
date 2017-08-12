@@ -64,16 +64,21 @@ def tic():
     return lambda: (time() - t)
 
 
-def retrieve_data(ticker, strategy_dictionary, filename=None):
-    end = time() - strategy_dictionary['offset'] * SEC_IN_DAY
-
-    start = end - SEC_IN_DAY * strategy_dictionary['n_days']
-
+def retrieve_data(ticker, strategy_dictionary, filename):
     data_local = None
     while data_local is None:
         try:
-            data_local = Data(
-                ticker, start, end, strategy_dictionary['candle_size'], strategy_dictionary['web_flag'], filename)
+            if strategy_dictionary['web_flag']:
+                end = time() - strategy_dictionary['offset'] * SEC_IN_DAY
+
+                start = end - SEC_IN_DAY * strategy_dictionary['n_days']
+
+                data_local = Data(
+                    ticker, strategy_dictionary['candle_size'], strategy_dictionary['web_flag'], start=start, end=end)
+            else:
+                data_local = Data(
+                    ticker, strategy_dictionary['candle_size'], strategy_dictionary['web_flag'],
+                    offset=strategy_dictionary['offset'], filename=filename, n_days=strategy_dictionary['n_days'])
         except:
             pass
 

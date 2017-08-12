@@ -5,9 +5,14 @@ from sklearn.decomposition import PCA, FastICA
 from poloniex_API import poloniex
 from API_settings import API_secret, API_key
 
+from matplotlib import pyplot as plt
+
+SEC_IN_DAY = 86400
+
 
 class Data:   
-    def __init__(self, currency_pair, start, end, period, web_flag, filename=None):
+    def __init__(self, currency_pair, period, web_flag, start=None, end=None, offset=None, n_days=None,
+                 filename=None):
         self.date = []
         self.price = []
         self.close = []
@@ -33,29 +38,32 @@ class Data:
         self.kalman_signal = []
         self.candle_price_difference = []
         if web_flag:
-            self.candle_input_web(currency_pair, start, end, period)
+            self.candle_input_web(currency_pair, period, start, end)
         else:
-            self.candle_input_file(filename, start, end, period)
+            self.candle_input_file(filename, period, offset, n_days)
 
-    def candle_input_file(self, filename, start, end, period):
+    def candle_input_file(self, filename, period, offset, n_days):
         candle_array = pd.read_csv(filename).as_matrix()
 
-        start_index = (np.abs(candle_array[:, 0] - start)).argmin()
-        end_index = (np.abs(candle_array[:, 0] - end)).argmin()
+        end_index = candle_array[-1, 4] - offset * SEC_IN_DAY
+        start_index = end_index - n_days * SEC_IN_DAY
+
+        end_index = (np.abs(candle_array[:, 4] - end_index)).argmin()
+        start_index = (np.abs(candle_array[:, 4] - start_index)).argmin()
 
         period_index = period / 300
 
-        self.date = candle_array[start_index:end_index:period_index, 0]
-        self.open = candle_array[(start_index + period_index):end_index:period_index, 3]
-        self.close = candle_array[(start_index + period_index - 1):end_index:period_index, 4]
+        self.date = candle_array[start_index:end_index:period_index, 4]
+        self.open = candle_array[(start_index + period_index):end_index:period_index, 6]
+        self.close = candle_array[(start_index + period_index - 1):end_index:period_index, 5]
+        self.close = self.close[-len(self.open):]
         self.high = np.zeros(len(self.close))
         self.low = np.zeros(len(self.close))
 
         for i in range(int(np.floor(len(self.high) / period_index))):
             loop_start = i * period_index
-            self.high[i] = np.max(candle_array[loop_start:loop_start + period_index, 1])
-            self.low[i] = np.min(candle_array[loop_start:loop_start + period_index, 2])
-
+            self.high[i] = np.max(candle_array[loop_start:loop_start + period_index, 2])
+            self.low[i] = np.min(candle_array[loop_start:loop_start + period_index, 3])
 
     def candle_input_web(self, currency_pair, start, end, period):
         poloniex_session = poloniex(API_key, API_secret)

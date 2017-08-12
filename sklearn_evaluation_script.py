@@ -33,13 +33,12 @@ def randomise_dictionary_inputs(strategy_dictionary_local):
     return strategy_dictionary_local
 
 
-
 if __name__ == '__main__':
     strategy_dictionary = {
         'trading_currencies': ['ETH', 'BTC'],
         'ticker_1': 'BTC_ETH',
         'ticker_2': 'USDT_BTC',
-        'candle_size': 300,
+        'candle_size': 1800,
         'n_days': 20,
         'offset': 0,
         'bid_ask_spread': 0.001,
@@ -50,7 +49,7 @@ if __name__ == '__main__':
         'ml_iterations': 100,
         'target_score': 'idealstrategy',
         'windows': [1, 5, 10, 50, 100],
-        'web_flag': 'False',
+        'web_flag': False,
         'filename1': "USDT_BTC.csv",
         'filename2': "BTC_ETH.csv"
     }

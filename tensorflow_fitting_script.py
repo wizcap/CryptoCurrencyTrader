@@ -13,6 +13,8 @@ def random_search(strategy_dictionary_local, n_iterations):
     while counter < n_iterations:
         counter += 1
 
+        #strategy_dictionary['sequence_flag'] = np.random.choice([True, False])
+
         if strategy_dictionary['sequence_flag']:
             strategy_dictionary_local = randomise_sequence_dictionary_inputs(strategy_dictionary_local)
         else:
@@ -50,7 +52,7 @@ if __name__ == '__main__':
         'ticker_1': 'BTC_ETH',
         'ticker_2': 'USDT_BTC',
         'candle_size': 1800,
-        'n_days': 40,
+        'n_days': 10,
         'offset': 0,
         'bid_ask_spread': 0.001,
         'transaction_fee': 0.0025,
@@ -69,12 +71,12 @@ if __name__ == '__main__':
         'filename2': "BTC_ETH.csv"
     }
 
-    search_iterations = 10
+    search_iterations = 2
 
     strategy_dictionary = random_search(strategy_dictionary, search_iterations)
 
     underlined_output('Offset validation')
-    offsets = np.linspace(0, 300, 10)
+    offsets = np.linspace(0, 100, 5)
 
     tensorflow_offset_scan_validation(strategy_dictionary, offsets)
 
