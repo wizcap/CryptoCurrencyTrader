@@ -41,37 +41,37 @@ def randomise_dictionary_inputs(strategy_dictionary):
 
 def randomise_sequence_dictionary_inputs(strategy_dictionary):
     strategy_dictionary['learning_rate'] = 10 ** np.random.uniform(-5, -1)
-    strategy_dictionary['num_layers'] = random.randint(1, 30)
-    strategy_dictionary['num_units'] = random.randint(5, 200)
+    strategy_dictionary['num_layers'] = random.randint(1, 100)
+    strategy_dictionary['num_units'] = random.randint(5, 100)
     return strategy_dictionary
 
 
 if __name__ == '__main__':
     strategy_dictionary = {
-        'trading_currencies': ['ETH', 'BTC'],
-        'ticker_1': 'BTC_ETH',
-        'ticker_2': 'USDT_BTC',
+        'trading_currencies': ['USDT', 'BTC'],
+        'ticker_1': 'USDT_BTC',
+        'ticker_2': 'BTC_ETH',
         'candle_size': 1800,
-        'n_days': 10,
+        'n_days': 20,
         'offset': 0,
-        'bid_ask_spread': 0.001,
+        'bid_ask_spread': 0.004,
         'transaction_fee': 0.0025,
         'train_test_ratio': 0.75,
         'output_flag': True,
         'plot_flag': False,
         'target_score': 'idealstrategy',
-        'windows': [1, 5, 10, 50, 100],
+        'windows': [10, 50, 100],
         'regression_mode': 'regression',
         'preprocessing': 'None',
         'ml_mode': 'tensorflow',
         'sequence_flag': False,
         'output_units': 1,
-        'web_flag': False,
+        'web_flag': True,
         'filename1': "USDT_BTC.csv",
         'filename2': "BTC_ETH.csv"
     }
 
-    search_iterations = 2
+    search_iterations = 10
 
     strategy_dictionary = random_search(strategy_dictionary, search_iterations)
 

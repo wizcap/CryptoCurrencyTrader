@@ -1,11 +1,17 @@
 import numpy as np
 import pandas as pd
-from sklearn.preprocessing import Imputer,minmax_scale
+from sklearn.preprocessing import Imputer,scale
 from sklearn.decomposition import PCA, FastICA
 from poloniex_API import poloniex
-from API_settings import API_secret, API_key
+from API_settings import poloniex_API_secret, poloniex_API_key
+from non_price_data import google_trends_interest_over_time, initialise_google_session
 
 SEC_IN_DAY = 86400
+
+SYMBOL_DICTIONARY = {
+    'BTC': 'bitcoin',
+    'ETH': 'ethereum',
+}
 
 
 class Data:   
@@ -19,24 +25,26 @@ class Data:
         self.low = []
         self.volume = []
         self.time = []
+        self.google_trend_score = []
         self.fractional_close = []
         self.high_low_spread = []
         self.open_close_spread = []
         self.absolute_volatility = []
+        self.fractional_volatility = []
+        self.fractional_volume = []
         self.exponential_moving_average_1 = []
         self.exponential_moving_average_2 = []
         self.exponential_moving_average_3 = []
-        self.exponential_moving_average_4 = []
-        self.exponential_moving_average_5 = []
         self.exponential_moving_volatility_1 = []
         self.exponential_moving_volatility_2 = []
         self.exponential_moving_volatility_3 = []
-        self.exponential_moving_volatility_4 = []
-        self.exponential_moving_volatility_5 = []
+        self.exponential_moving_volume_1 = []
+        self.exponential_moving_volume_2 = []
+        self.exponential_moving_volume_3 = []
         self.kalman_signal = []
-        self.candle_price_difference = []
+
         if web_flag:
-            self.candle_input_web(currency_pair, period, start, end)
+            self.candle_input_web(currency_pair, start, end, period)
         else:
             self.candle_input_file(filename, period, offset, n_days)
 
@@ -51,6 +59,7 @@ class Data:
 
         period_index = period / 300
 
+        self.volume = candle_array[start_index:end_index:period_index, 0]
         self.date = candle_array[start_index:end_index:period_index, 4]
         self.open = candle_array[(start_index + period_index):end_index:period_index, 6]
         self.close = candle_array[(start_index + period_index - 1):end_index:period_index, 5]
@@ -64,11 +73,12 @@ class Data:
             self.low[i] = np.min(candle_array[loop_start:loop_start + period_index, 3])
 
     def candle_input_web(self, currency_pair, start, end, period):
-        poloniex_session = poloniex(API_key, API_secret)
+        poloniex_session = poloniex(poloniex_API_key, poloniex_API_secret)
 
         candle_json = poloniex_session.returnChartData(currency_pair, start, end, period)
 
         candle_length = len(candle_json[u'candleStick'])
+        self.volume = nan_array_initialise(candle_length)
         self.date = nan_array_initialise(candle_length)
         self.close = nan_array_initialise(candle_length)
         self.open = nan_array_initialise(candle_length)
@@ -76,17 +86,19 @@ class Data:
         self.low = nan_array_initialise(candle_length)
 
         for loop_counter in range(candle_length):
-            self.date[loop_counter] = candle_json[u'candleStick'][loop_counter][u'date']
-            self.close[loop_counter] = candle_json[u'candleStick'][loop_counter][u'close']
-            self.open[loop_counter] = candle_json[u'candleStick'][loop_counter][u'open']
-            self.high[loop_counter] = candle_json[u'candleStick'][loop_counter][u'high']
-            self.low[loop_counter] = candle_json[u'candleStick'][loop_counter][u'low']
+            self.volume[loop_counter] = float(candle_json[u'candleStick'][loop_counter][u'volume'])
+            self.date[loop_counter] = float(candle_json[u'candleStick'][loop_counter][u'date'])
+            self.close[loop_counter] = float(candle_json[u'candleStick'][loop_counter][u'close'])
+            self.open[loop_counter] = float(candle_json[u'candleStick'][loop_counter][u'open'])
+            self.high[loop_counter] = float(candle_json[u'candleStick'][loop_counter][u'high'])
+            self.low[loop_counter] = float(candle_json[u'candleStick'][loop_counter][u'low'])
 
     def extend_candle(self, new_candle):
         for date in new_candle.date:
             if date in self.date:
                 trim_candle(new_candle, np.where(new_candle.date == date))
 
+        self.volume = np.concatenate((self.volume, new_candle.date))
         self.date = np.concatenate((self.date, new_candle.date))
         self.open = np.concatenate((self.open, new_candle.open))
         self.close = np.concatenate((self.close, new_candle.close))
@@ -102,63 +114,57 @@ class Data:
     def calculate_open_close_spread(self):
         self.open_close_spread = self.close - self.open
 
-    def calculate_absolute_volatility(self):
+    def calculate_fractional_volatility(self):
         self.calculate_high_low_spread()
-        self.calculate_open_close_spread()
-        self.absolute_volatility = np.abs(self.high_low_spread) - np.abs(self.open_close_spread)
+        self.absolute_volatility = np.abs(self.high_low_spread)
+        self.fractional_volatility = fractional_change(self.absolute_volatility)
+
+    def calculate_fractional_volume(self):
+        self.fractional_volume = fractional_change(self.volume)
 
     def calculate_indicators(self, strategy_dictionary):
-        self.calculate_absolute_volatility()
-        self.exponential_moving_average_1 = exponential_moving_average(self.close[:-1],
+        self.calculate_fractional_volatility()
+        self.calculate_fractional_volume()
+
+        self.exponential_moving_average_1 = exponential_moving_average(self.fractional_close[:-1],
                                                                        strategy_dictionary['windows'][0])
-        self.exponential_moving_average_2 = exponential_moving_average(self.close[:-1],
+        self.exponential_moving_average_2 = exponential_moving_average(self.fractional_close[:-1],
                                                                        strategy_dictionary['windows'][1])
-        self.exponential_moving_average_3 = exponential_moving_average(self.close[:-1],
+        self.exponential_moving_average_3 = exponential_moving_average(self.fractional_close[:-1],
                                                                        strategy_dictionary['windows'][2])
-        self.exponential_moving_average_4 = exponential_moving_average(self.close[:-1],
-                                                                       strategy_dictionary['windows'][3])
-        self.exponential_moving_average_5 = exponential_moving_average(self.close[:-1],
-                                                                       strategy_dictionary['windows'][4])
 
-        self.exponential_moving_volatility_1 = exponential_moving_average(self.absolute_volatility[:-1],
+        self.exponential_moving_volatility_1 = exponential_moving_average(self.fractional_volatility[:-1],
                                                                           strategy_dictionary['windows'][0])
-        self.exponential_moving_volatility_2 = exponential_moving_average(self.absolute_volatility[:-1],
+        self.exponential_moving_volatility_2 = exponential_moving_average(self.fractional_volatility[:-1],
                                                                           strategy_dictionary['windows'][1])
-        self.exponential_moving_volatility_3 = exponential_moving_average(self.absolute_volatility[:-1],
+        self.exponential_moving_volatility_3 = exponential_moving_average(self.fractional_volatility[:-1],
                                                                           strategy_dictionary['windows'][2])
-        self.exponential_moving_volatility_4 = exponential_moving_average(self.absolute_volatility[:-1],
-                                                                          strategy_dictionary['windows'][3])
-        self.exponential_moving_volatility_5 = exponential_moving_average(self.absolute_volatility[:-1],
-                                                                          strategy_dictionary['windows'][4])
-        self.kalman_signal = kalman_filter(self.close[:-1])
 
+        self.exponential_moving_volume_1 = exponential_moving_average(self.fractional_volume[:-1],
+                                                                          strategy_dictionary['windows'][0])
+        self.exponential_moving_volume_2 = exponential_moving_average(self.fractional_volume[:-1],
+                                                                          strategy_dictionary['windows'][1])
+        self.exponential_moving_volume_3 = exponential_moving_average(self.fractional_volume[:-1],
+                                                                          strategy_dictionary['windows'][2])
 
-def kalman_filter(input_price):
-    n_iter = len(input_price)
-    vector_size = (n_iter,)
+        self.kalman_signal = kalman_filter(self.close[:-2])
 
-    Q = 1E-5
+        self.non_price_data(strategy_dictionary)
 
-    post_estimate = np.zeros(vector_size)  
-    P = np.zeros(vector_size)
-    post_estimate_minus = np.zeros(vector_size)
-    Pminus = np.zeros(vector_size)
-    K = np.zeros(vector_size)
+    def non_price_data(self, strategy_dictionary):
+        pytrend = initialise_google_session()
+        search_terms = strategy_dictionary['trading_currencies']
 
-    R = 0.1 ** 2
+        if 'USDT' in search_terms:
+            del search_terms[search_terms == 'USDT']
 
-    post_estimate[0] = input_price[0]
-    P[0] = 1.0
+        self.google_trend_score = np.zeros((len(self.date), len(search_terms)))
 
-    for k in range(1, n_iter):
-        post_estimate_minus[k] = post_estimate[k - 1]
-        Pminus[k] = P[k - 1] + Q
+        for i in range(len(search_terms)):
+            search_term = SYMBOL_DICTIONARY[search_terms[i]]
+            dates, interest = google_trends_interest_over_time(pytrend, [search_term,])
 
-        K[k] = Pminus[k] / (Pminus[k] + R)
-        post_estimate[k] = post_estimate_minus[k] + K[k] * (input_price[k] - post_estimate_minus[k])
-        P[k] = (1 - K[k]) * Pminus[k]
-        
-    return post_estimate
+            self.google_trend_score[:, i] = np.interp(self.date, dates, interest)
 
 
 class TradingTargets:
@@ -248,6 +254,9 @@ def trim_candle(candle, index):
 
 
 def fractional_change(price):
+    replacement = min(price[price != 0]) / 1e3
+    temp = price
+    temp[temp == 0] = replacement
     return price[1:] / price[:-1]
 
 
@@ -287,34 +296,34 @@ def generate_training_variables(data_obj, strategy_dictionary):
     data_obj.calculate_indicators(strategy_dictionary)
 
     fitting_inputs = np.vstack((
-        #data_obj.exponential_moving_average_1,
+        data_obj.exponential_moving_average_1,
         data_obj.exponential_moving_average_2,
         data_obj.exponential_moving_average_3,
-        data_obj.exponential_moving_average_4,
-        data_obj.exponential_moving_average_5,
-        #data_obj.exponential_moving_volatility_1,
+        data_obj.exponential_moving_volatility_1,
         data_obj.exponential_moving_volatility_2,
         data_obj.exponential_moving_volatility_3,
-        data_obj.exponential_moving_volatility_4,
-        data_obj.exponential_moving_volatility_5,
+        data_obj.exponential_moving_volume_1,
+        data_obj.exponential_moving_volume_2,
+        data_obj.exponential_moving_volume_3,
         data_obj.kalman_signal,
-        data_obj.close[:-1],
-        data_obj.open[:-1],
-        data_obj.high[:-1],
-        data_obj.low[:-1],
-        pad_nan(data_obj.close[:-2], 1),
-        pad_nan(data_obj.open[:-2], 1),
-        pad_nan(data_obj.high[:-2], 1),
-        pad_nan(data_obj.low[:-2], 1),
-        pad_nan(data_obj.close[:-3], 2),
-        pad_nan(data_obj.open[:-3], 2),
-        pad_nan(data_obj.high[:-3], 2),
-        pad_nan(data_obj.low[:-3], 2),
+        #data_obj.close[:-1],
+        data_obj.open[:-2],
+        #data_obj.high[:-1],
+        #data_obj.low[:-1],
+        #pad_nan(data_obj.close[:-2], 1),
+        #pad_nan(data_obj.open[:-2], 1),
+        #pad_nan(data_obj.high[:-2], 1),
+        #pad_nan(data_obj.low[:-2], 1),
+        #pad_nan(data_obj.close[:-3], 2),
+        #pad_nan(data_obj.open[:-3], 2),
+        #pad_nan(data_obj.high[:-3], 2),
+        #pad_nan(data_obj.low[:-3], 2),
+        data_obj.google_trend_score[:-2].T,
         ))
 
     fitting_inputs = fitting_inputs.T
 
-    fitting_inputs_scaled = minmax_scale(fitting_inputs)
+    fitting_inputs_scaled = scale(fitting_inputs)
 
     if strategy_dictionary['preprocessing'] == 'PCA':
         fitting_inputs_scaled = pca_transform(fitting_inputs_scaled)
@@ -322,7 +331,7 @@ def generate_training_variables(data_obj, strategy_dictionary):
     if strategy_dictionary['preprocessing'] == 'FastICA':
         fitting_inputs_scaled = fast_ica_transform(fitting_inputs_scaled)
 
-    fitting_targets = trading_targets.strategy_score
+    fitting_targets = trading_targets.strategy_score[1:]
 
     return fitting_inputs_scaled, fitting_targets
 
@@ -330,6 +339,7 @@ def generate_training_variables(data_obj, strategy_dictionary):
 def pad_nan(vector, n):
     pad_vector = np.zeros(n)
     return np.hstack((pad_vector, vector))
+
 
 def imputer_transform(data):
     imputer = Imputer()
@@ -368,3 +378,31 @@ def train_test_validation_indices(input_data):
     validation_indices_local = range(test_indices_local[-1] + 1, data_length)
 
     return train_indices_local, test_indices_local, validation_indices_local
+
+
+def kalman_filter(input_price):
+    n_iter = len(input_price)
+    vector_size = (n_iter,)
+
+    Q = 1E-5
+
+    post_estimate = np.zeros(vector_size)
+    P = np.zeros(vector_size)
+    post_estimate_minus = np.zeros(vector_size)
+    Pminus = np.zeros(vector_size)
+    K = np.zeros(vector_size)
+
+    R = 0.1 ** 2
+
+    post_estimate[0] = input_price[0]
+    P[0] = 1.0
+
+    for k in range(1, n_iter):
+        post_estimate_minus[k] = post_estimate[k - 1]
+        Pminus[k] = P[k - 1] + Q
+
+        K[k] = Pminus[k] / (Pminus[k] + R)
+        post_estimate[k] = post_estimate_minus[k] + K[k] * (input_price[k] - post_estimate_minus[k])
+        P[k] = (1 - K[k]) * Pminus[k]
+
+    return post_estimate
