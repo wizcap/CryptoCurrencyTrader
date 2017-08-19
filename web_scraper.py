@@ -89,7 +89,7 @@ class ForumSpider(scrapy.Spider):
 def convert_date_to_unix_time(date_local):
     if 'Today at ' in date_local:
         date_local = date_local.replace('Today at ', '')
-        midnight = datetime.combine(date.today(), time.min)
+        midnight = float(datetime.combine(date.today(), time.min))
         date_local = midnight + mktime(datetime.strptime(date_local, "%I:%M:%S %p").timetuple())
     else:
         date_local = mktime(datetime.strptime(date_local, "%B %d, %Y, %I:%M:%S %p").timetuple())
