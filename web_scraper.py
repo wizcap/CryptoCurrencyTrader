@@ -10,7 +10,7 @@ from scrapy.crawler import CrawlerProcess
 from scrapy.spiders import Rule
 from scrapy.exceptions import CloseSpider
 from scrapy.linkextractors import LinkExtractor
-from reddit_API_settings import client_id, client_secret, user_agent
+from API_settings import client_id, client_secret, user_agent
 
 date_word_list = [
     'January', 'February', 'March', 'April', 'May', 'June', 'July', 'August', 'September', 'October', 'November',
