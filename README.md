@@ -10,8 +10,8 @@ A python project combining web scraping and natural language processing. The pro
 To run as a standalone script add a file named API_settings.py containing your google and reddit API login:
 google_username = ""  
 google_password = ""  
-client_id = ''  
-client_secret = ''  
+client_id = ""  
+client_secret = ""    
 user_agent = 'Python Scraping App'  
 
 
