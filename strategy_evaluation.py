@@ -123,7 +123,7 @@ def output_strategy_results(strategy_dictionary, fitting_dictionary, data_to_pre
                         / (fitting_dictionary['portfolio_value'][0] * prediction_data[-1]) - 1
 
         print "Fractional profit compared to buy and hold: ", profit_factor
-        print "Cross validation error: ", fitting_dictionary['error']
+        print "Mean squared error: ", fitting_dictionary['error']
         print "Number of days: ", strategy_dictionary['n_days']
         print "Candle time period:", strategy_dictionary['candle_size']
         print "Fitting model: ", strategy_dictionary['ml_mode']

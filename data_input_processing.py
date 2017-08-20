@@ -1,11 +1,13 @@
 import numpy as np
 import pandas as pd
+import logging
 from sklearn.preprocessing import Imputer,scale
 from sklearn.decomposition import PCA, FastICA
 from poloniex_API import poloniex
 from API_settings import poloniex_API_secret, poloniex_API_key
 from non_price_data import google_trends_interest_over_time, initialise_google_session
-
+from vendor.web_scraper import scrape_subreddits, scrape_forums
+from vendor.sentiment_analysis import analyse_sentiments
 SEC_IN_DAY = 86400
 
 SYMBOL_DICTIONARY = {
@@ -13,10 +15,15 @@ SYMBOL_DICTIONARY = {
     'ETH': 'ethereum',
 }
 
+SENTIMENT_KEYWORDS = {
+    'BTC': ['bitcoin', 'bitcoins', 'xbt', 'btc', 'Bitcoin', 'Bitcoins', 'BTC', 'XBT'],
+    'ETH': ['ethereum', 'ETH'],
+}
+
 
 class Data:   
-    def __init__(self, currency_pair, period, web_flag, start=None, end=None, offset=None, n_days=None,
-                 filename=None):
+    def __init__(self, currency_pair, scraper_currency, period, web_flag, start=None, end=None,
+                 offset=None, n_days=None, filename=None):
         self.date = []
         self.price = []
         self.close = []
@@ -26,6 +33,7 @@ class Data:
         self.volume = []
         self.time = []
         self.google_trend_score = []
+        self.web_sentiment_score = []
         self.fractional_close = []
         self.high_low_spread = []
         self.open_close_spread = []
@@ -42,6 +50,9 @@ class Data:
         self.exponential_moving_volume_2 = []
         self.exponential_moving_volume_3 = []
         self.kalman_signal = []
+        self.scraper_currency = scraper_currency
+        self.scraper_score_dates = []
+        self.scraper_score_texts = []
 
         if web_flag:
             self.candle_input_web(currency_pair, start, end, period)
@@ -122,7 +133,7 @@ class Data:
     def calculate_fractional_volume(self):
         self.fractional_volume = fractional_change(self.volume)
 
-    def calculate_indicators(self, strategy_dictionary):
+    def calculate_indicators(self, strategy_dictionary, prior_data_obj=None):
         self.calculate_fractional_volatility()
         self.calculate_fractional_volume()
 
@@ -149,9 +160,13 @@ class Data:
 
         self.kalman_signal = kalman_filter(self.close[:-2])
 
-        self.non_price_data(strategy_dictionary)
+        self.non_price_data(strategy_dictionary, prior_data_obj=prior_data_obj)
 
-    def non_price_data(self, strategy_dictionary):
+    def non_price_data(self, strategy_dictionary, prior_data_obj=None):
+        self.google_trend_data(strategy_dictionary)
+        self.web_scraping_sentiment_analysis(strategy_dictionary, prior_data_obj=prior_data_obj)
+
+    def google_trend_data(self, strategy_dictionary):
         pytrend = initialise_google_session()
         search_terms = strategy_dictionary['trading_currencies']
 
@@ -165,6 +180,36 @@ class Data:
             dates, interest = google_trends_interest_over_time(pytrend, [search_term,])
 
             self.google_trend_score[:, i] = np.interp(self.date, dates, interest)
+
+    def web_scraping_sentiment_analysis(self, strategy_dictionary, prior_data_obj=None):
+        subreddits = ["cryptocurrency", "cryptomarkets", "bitcoin", "bitcoinmarkets", "ethereum"]
+
+        forum_urls = ["https://bitcointalk.org/index.php?board=5.0", "https://bitcointalk.org/index.php?board=7.0",
+                      "https://bitcointalk.org/index.php?board=8.0"]
+        allowed_domains = ["bitcointalk.org", ]
+
+        if prior_data_obj is None:
+            dates, texts = scrape_subreddits(
+                subreddits, submission_limit=strategy_dictionary['scraper_page_limit'])
+            dates_temp, texts_temp = scrape_forums(
+                forum_urls, allowed_domains, max_pages=strategy_dictionary['scraper_page_limit'])
+
+            dates += dates_temp
+            texts += texts_temp
+
+            self.scraper_score_dates = dates
+            self.scraper_score_texts = texts
+        else:
+            dates = prior_data_obj.scraper_score_dates
+            texts = prior_data_obj.scraper_score_texts
+
+        dates, texts, sentiments = analyse_sentiments(dates, texts, SENTIMENT_KEYWORDS[self.scraper_currency])
+
+        sentiments, dates = sort_arrays_by_first(dates, sentiments)
+
+        self.web_sentiment_score = np.interp(self.date, dates, sentiments)
+
+        logging.getLogger().setLevel(logging.WARNING)
 
 
 class TradingTargets:
@@ -237,8 +282,9 @@ class TradingTargets:
                 self.strategy_score[index:] = 1
 
     def convert_score_to_classification_target(self):
-        self.strategy_score[self.strategy_score > 1] = 1
-        self.strategy_score[self.strategy_score < 1] = -1
+        self.classification_score = np.zeros(len(self.strategy_score))
+        self.classification_score[self.strategy_score > 1] = 1
+        self.classification_score[self.strategy_score < 1] = -1
 
 
 def effective_fee(strategy_dictionary):
@@ -286,14 +332,13 @@ def nan_array_initialise(size):
     return array
 
 
-def generate_training_variables(data_obj, strategy_dictionary):
+def generate_training_variables(data_obj, strategy_dictionary, prior_data_obj=None):
     trading_targets = TradingTargets(data_obj)
     trading_targets.ideal_strategy_score(strategy_dictionary)
 
-    if strategy_dictionary['regression_mode'] == 'classification':
-        trading_targets.convert_score_to_classification_target()
+    trading_targets.convert_score_to_classification_target()
 
-    data_obj.calculate_indicators(strategy_dictionary)
+    data_obj.calculate_indicators(strategy_dictionary, prior_data_obj=prior_data_obj)
 
     fitting_inputs = np.vstack((
         data_obj.exponential_moving_average_1,
@@ -319,21 +364,27 @@ def generate_training_variables(data_obj, strategy_dictionary):
         #pad_nan(data_obj.high[:-3], 2),
         #pad_nan(data_obj.low[:-3], 2),
         data_obj.google_trend_score[:-2].T,
+        data_obj.web_sentiment_score[:-2]
         ))
 
     fitting_inputs = fitting_inputs.T
 
     fitting_inputs_scaled = scale(fitting_inputs)
 
+    continuous_targets = trading_targets.strategy_score[1:]
+    classification_targets = trading_targets.classification_score[1:]
+
+    return fitting_inputs_scaled, continuous_targets, classification_targets
+
+
+def preprocessing_inputs(strategy_dictionary, fitting_inputs_scaled):
     if strategy_dictionary['preprocessing'] == 'PCA':
         fitting_inputs_scaled = pca_transform(fitting_inputs_scaled)
 
     if strategy_dictionary['preprocessing'] == 'FastICA':
         fitting_inputs_scaled = fast_ica_transform(fitting_inputs_scaled)
 
-    fitting_targets = trading_targets.strategy_score[1:]
-
-    return fitting_inputs_scaled, fitting_targets
+    return fitting_inputs_scaled
 
 
 def pad_nan(vector, n):
@@ -406,3 +457,7 @@ def kalman_filter(input_price):
         P[k] = (1 - K[k]) * Pminus[k]
 
     return post_estimate
+
+
+def sort_arrays_by_first(Y, X):
+    return [x for (y, x) in sorted(zip(Y, X))], [y for (y, x) in sorted(zip(Y, X))]

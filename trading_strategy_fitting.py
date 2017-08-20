@@ -8,8 +8,7 @@ from machine_learning import random_forest_fitting, svm_fitting, adaboost_fittin
 SEC_IN_DAY = 86400
 
 
-def meta_fitting(data_to_predict_local, data_input_2, strategy_dictionary):
-    fitting_inputs, fitting_targets = input_processing(data_to_predict_local, data_input_2, strategy_dictionary)
+def meta_fitting(fitting_inputs, fitting_targets, strategy_dictionary):
     error = []
     train_indices, test_indices = train_test_indices(fitting_inputs, strategy_dictionary['train_test_ratio'])
     if strategy_dictionary['ml_mode'] == 'svm':
@@ -40,12 +39,14 @@ def meta_fitting(data_to_predict_local, data_input_2, strategy_dictionary):
 
 
 def input_processing(data_to_predict_local, data_input_2, strategy_dictionary):
-    fitting_inputs, fitting_targets = generate_training_variables(data_to_predict_local, strategy_dictionary)
-    fitting_inputs_2, fitting_targets_2 = generate_training_variables(data_input_2, strategy_dictionary)
+    fitting_inputs, continuous_targets, classification_targets = generate_training_variables(
+        data_to_predict_local, strategy_dictionary)
+    fitting_inputs_2, fitting_targets_2, classification_targets_2 = generate_training_variables(
+        data_input_2, strategy_dictionary, prior_data_obj=data_to_predict_local)
     fitting_inputs, fitting_inputs_2 = trim_inputs(fitting_inputs, fitting_inputs_2)
     fitting_inputs = np.hstack((fitting_inputs, fitting_inputs_2))
 
-    return fitting_inputs, fitting_targets
+    return fitting_inputs, continuous_targets, classification_targets
 
 
 def trim_inputs(fitting_inputs, fitting_inputs_2):
@@ -64,7 +65,7 @@ def tic():
     return lambda: (time() - t)
 
 
-def retrieve_data(ticker, strategy_dictionary, filename):
+def retrieve_data(ticker, scraper_currency, strategy_dictionary, filename):
     data_local = None
     while data_local is None:
         try:
@@ -74,11 +75,14 @@ def retrieve_data(ticker, strategy_dictionary, filename):
                 start = end - SEC_IN_DAY * strategy_dictionary['n_days']
 
                 data_local = Data(
-                    ticker, strategy_dictionary['candle_size'], strategy_dictionary['web_flag'], start=start, end=end)
+                    ticker, scraper_currency, strategy_dictionary['candle_size'], strategy_dictionary['web_flag'],
+                    start=start, end=end,
+                )
             else:
                 data_local = Data(
-                    ticker, strategy_dictionary['candle_size'], strategy_dictionary['web_flag'],
-                    offset=strategy_dictionary['offset'], filename=filename, n_days=strategy_dictionary['n_days'])
+                    ticker, scraper_currency, strategy_dictionary['candle_size'], strategy_dictionary['web_flag'],
+                    offset=strategy_dictionary['offset'], filename=filename,
+                    n_days=strategy_dictionary['n_days'])
         except:
             pass
 
@@ -125,32 +129,29 @@ def tensorflow_offset_scan_validation(strategy_dictionary, offsets):
 
 def import_data(strategy_dictionary):
     data_to_predict = retrieve_data(
-        strategy_dictionary['ticker_1'], strategy_dictionary, strategy_dictionary['filename1'])
-    data_2 = retrieve_data(strategy_dictionary['ticker_2'], strategy_dictionary, strategy_dictionary['filename2'])
+        strategy_dictionary['ticker_1'], strategy_dictionary['scraper_currency_1'], strategy_dictionary,
+        strategy_dictionary['filename1'])
+    data_2 = retrieve_data(strategy_dictionary['ticker_2'], strategy_dictionary['scraper_currency_2'],
+                           strategy_dictionary, strategy_dictionary['filename2'])
 
     return data_to_predict, data_2
 
 
-def fit_strategy(strategy_dictionary):
+def fit_strategy(strategy_dictionary, data_to_predict, data_2, fitting_inputs, fitting_targets):
     toc = tic()
 
-    data_to_predict, data_2 = import_data(strategy_dictionary)
-
-    fitting_dictionary = meta_fitting(data_to_predict, data_2, strategy_dictionary)
+    fitting_dictionary = meta_fitting(fitting_inputs, fitting_targets, strategy_dictionary)
 
     fitting_dictionary = post_process_training_results(strategy_dictionary, fitting_dictionary, data_to_predict)
 
     profit_factor = output_strategy_results(strategy_dictionary, fitting_dictionary, data_to_predict, toc)
 
-    return fitting_dictionary, data_to_predict, profit_factor
+    return fitting_dictionary, profit_factor
 
 
-def fit_tensorflow(strategy_dictionary):
+def fit_tensorflow(strategy_dictionary, data_to_predict, fitting_inputs, fitting_targets):
     toc = tic()
 
-    data_to_predict, data_2 = import_data(strategy_dictionary)
-
-    fitting_inputs, fitting_targets = input_processing(data_to_predict, data_2, strategy_dictionary)
     train_indices, test_indices = train_test_indices(fitting_inputs, strategy_dictionary['train_test_ratio'])
 
     if strategy_dictionary['sequence_flag']:
@@ -166,7 +167,7 @@ def fit_tensorflow(strategy_dictionary):
     fitting_dictionary = post_process_training_results(strategy_dictionary, fitting_dictionary, data_to_predict)
 
     profit_factor = output_strategy_results(strategy_dictionary, fitting_dictionary, data_to_predict, toc)
-    return fitting_dictionary, data_to_predict, error, profit_factor
+    return fitting_dictionary, error, profit_factor
 
 
 def underlined_output(string):

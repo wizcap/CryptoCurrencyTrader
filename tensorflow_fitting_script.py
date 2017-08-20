@@ -1,26 +1,39 @@
 import numpy as np
 import random
 from trading_strategy_fitting import tic, tensorflow_offset_scan_validation, fit_tensorflow,\
-    underlined_output
+    underlined_output, import_data, input_processing
 from strategy_evaluation import output_strategy_results
+from data_input_processing import  preprocessing_inputs
 
 
 def random_search(strategy_dictionary_local, n_iterations):
     toc = tic()
     counter = 0
-    error = 1e10
+    error = 1e5
+    data_to_predict, data_2 = import_data(strategy_dictionary)
+    fitting_inputs, continuous_targets, classification_targets = input_processing(
+        data_to_predict, data_2, strategy_dictionary)
 
     while counter < n_iterations:
         counter += 1
 
-        #strategy_dictionary['sequence_flag'] = np.random.choice([True, False])
+        strategy_dictionary['sequence_flag'] = np.random.choice([True, False])
 
         if strategy_dictionary['sequence_flag']:
             strategy_dictionary_local = randomise_sequence_dictionary_inputs(strategy_dictionary_local)
         else:
             strategy_dictionary_local = randomise_dictionary_inputs(strategy_dictionary_local)
 
-        fitting_dictionary, data_to_predict, error_loop, profit_factor = fit_tensorflow(strategy_dictionary_local)
+        if strategy_dictionary['regression_mode'] == 'classification':
+            fitting_targets = classification_targets
+        elif strategy_dictionary['regression_mode'] == 'regression':
+            fitting_targets = continuous_targets
+
+        fitting_inputs = preprocessing_inputs(strategy_dictionary, fitting_inputs)
+
+        fitting_dictionary, error_loop, profit_factor = fit_tensorflow(strategy_dictionary_local,
+                                                                                        data_to_predict, fitting_inputs,
+                                                                                        fitting_targets)
 
         if error_loop < error:
             error = error_loop
@@ -51,8 +64,10 @@ if __name__ == '__main__':
         'trading_currencies': ['USDT', 'BTC'],
         'ticker_1': 'USDT_BTC',
         'ticker_2': 'BTC_ETH',
+        'scraper_currency_1': 'BTC',
+        'scraper_currency_2': 'ETH',
         'candle_size': 1800,
-        'n_days': 20,
+        'n_days': 10, #TEST
         'offset': 0,
         'bid_ask_spread': 0.004,
         'transaction_fee': 0.0025,
@@ -68,7 +83,8 @@ if __name__ == '__main__':
         'output_units': 1,
         'web_flag': True,
         'filename1': "USDT_BTC.csv",
-        'filename2': "BTC_ETH.csv"
+        'filename2': "BTC_ETH.csv",
+        'scraper_page_limit': 2, #TEST
     }
 
     search_iterations = 10

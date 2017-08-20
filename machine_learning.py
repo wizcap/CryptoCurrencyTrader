@@ -2,6 +2,7 @@ from sklearn.svm import SVR, SVC
 from sklearn.model_selection import RandomizedSearchCV, cross_val_score
 from sklearn.ensemble import RandomForestClassifier, RandomForestRegressor, AdaBoostClassifier, AdaBoostRegressor, \
     GradientBoostingClassifier, GradientBoostingRegressor, ExtraTreesClassifier, ExtraTreesRegressor
+from sklearn.metrics import mean_squared_error
 from tensorflow.contrib import learn
 from tensorflow.python.estimator.inputs.inputs import numpy_input_fn
 import polyaxon as plx
@@ -85,11 +86,10 @@ def tensorflow_fitting(train_indices, test_indices, input_data, target_data):
 
     classifier.fit(input_fn=lambda : input_fn(input_data[train_indices], target_data[train_indices]), steps=2000)
 
-    error = classifier.evaluate(input_fn=lambda: input_fn(input_data[train_indices], target_data[train_indices]), steps=1)
-    error = error['loss']
-
     training_strategy_score = list(classifier.predict(input_data[train_indices]))
     fitted_strategy_score = list(classifier.predict(input_data[test_indices]))
+
+    error = mean_squared_error(target_data[train_indices], training_strategy_score)
 
     fitting_dictionary = {
         'training_strategy_score': training_strategy_score,
@@ -155,7 +155,7 @@ def tensorflow_sequence_fitting(
     train_score = [i['results'] for i in xp.estimator.predict(numpy_input_fn({'x': X[train_indices]}, shuffle=False))]
     predicted = [i['results'] for i in xp.estimator.predict(numpy_input_fn({'x': X[test_indices]}, shuffle=False))]
 
-    error = np.sum((train_score - y[train_indices]) ** 2)
+    error = mean_squared_error(y[train_indices], train_score)
 
     fitting_dictionary = {
         'training_strategy_score': np.concatenate(train_score, axis=0),
@@ -175,10 +175,10 @@ def random_search(clf, param_set, train_indices, test_indices, input_data, targe
 
     random_search_local.fit(input_data[train_indices], target_data[train_indices])
 
-    error = np.mean(
-        np.mean(cross_val_score(random_search_local, input_data[train_indices], target_data[train_indices])))
-
     training_strategy_score = random_search_local.predict(input_data[train_indices])
+
+    error = mean_squared_error(training_strategy_score, target_data[train_indices])
+
     if len(test_indices) != 0:
         fitted_strategy_score = random_search_local.predict(input_data[test_indices])
     else:
