@@ -76,7 +76,7 @@ def post_process_regression_results(fitting_dictionary, strategy_dictionary, fra
 
     fitting_dictionary['portfolio_value'], fitting_dictionary['n_trades'] = convert_strategy_score_to_profit(
         (fitting_dictionary['fitted_strategy_score']), fitting_dictionary['buy_threshold'],
-        fitting_dictionary['sell_threshold'], fractional_close[fitting_dictionary['test_indices']],
+        fitting_dictionary['sell_threshold'], fractional_close[fitting_dictionary['validation_indices']],
         strategy_dictionary)
 
     return fitting_dictionary
@@ -87,7 +87,7 @@ def post_process_classification_results(fitting_dictionary, strategy_dictionary,
     number_of_trades = number_of_trades_from_currency_position(fitted_currency_position)
 
     fitting_dictionary['portfolio_value'] = strategy_profit(fitted_currency_position, fractional_close[
-        fitting_dictionary['test_indices']], strategy_dictionary)
+        fitting_dictionary['validation_indices']], strategy_dictionary)
     fitting_dictionary['n_trades'] = number_of_trades
     return fitting_dictionary
 

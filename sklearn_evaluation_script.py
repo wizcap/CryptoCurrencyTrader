@@ -1,5 +1,5 @@
 import numpy as np
-from random import randint, choice
+from random import choice
 from trading_strategy_fitting import fit_strategy, offset_scan_validation, tic, underlined_output, import_data,\
     input_processing
 from data_input_processing import  preprocessing_inputs
@@ -60,7 +60,7 @@ if __name__ == '__main__':
         'offset': 0,
         'bid_ask_spread': 0.004,
         'transaction_fee': 0.0025,
-        'train_test_ratio': 0.5,
+        'train_test_validation_ratios': [0.5, 0.25, 0.25],
         'output_flag': True,
         'plot_flag': False,
         'ml_iterations': 10,

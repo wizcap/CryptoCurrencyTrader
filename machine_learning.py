@@ -13,7 +13,7 @@ from os.path import exists
 from scipy import stats
 
 
-def svm_fitting(input_data, target_data, train_indices, test_indices, strategy_dictionary):
+def svm_fitting(input_data, target_data, train_indices, test_indices, validation_indices, strategy_dictionary):
     param_set = {'kernel': ['rbf'],
                  'C': stats.expon(scale=0.01),
                  'gamma': stats.expon(scale=0.01)}
@@ -23,10 +23,11 @@ def svm_fitting(input_data, target_data, train_indices, test_indices, strategy_d
     elif strategy_dictionary['regression_mode'] == 'classification':
         clf = SVC()
 
-    return random_search(clf, param_set, train_indices, test_indices, input_data, target_data)
+    return random_search(clf, param_set, train_indices, test_indices, validation_indices, input_data, target_data)
 
 
-def random_forest_fitting(input_data, target_data, train_indices, test_indices, strategy_dictionary):
+def random_forest_fitting(
+        input_data, target_data, train_indices, test_indices, validation_indices, strategy_dictionary):
     if strategy_dictionary['regression_mode'] == 'regression':
         clf = RandomForestRegressor(n_jobs=-1)
     elif strategy_dictionary['regression_mode'] == 'classification':
@@ -36,10 +37,10 @@ def random_forest_fitting(input_data, target_data, train_indices, test_indices, 
                  'max_depth': [1, 2, 3, None],
                  'max_features': range(1, 5)}
 
-    return random_search(clf, param_set, train_indices, test_indices, input_data, target_data)
+    return random_search(clf, param_set, train_indices, test_indices, validation_indices, input_data, target_data)
 
 
-def adaboost_fitting(input_data, target_data, train_indices, test_indices, strategy_dictionary):
+def adaboost_fitting(input_data, target_data, train_indices, test_indices, validation_indices, strategy_dictionary):
     if strategy_dictionary['regression_mode'] == 'regression':
         clf = AdaBoostRegressor()
     elif strategy_dictionary['regression_mode'] == 'classification':
@@ -49,10 +50,11 @@ def adaboost_fitting(input_data, target_data, train_indices, test_indices, strat
                  "n_estimators": range(2, 1000),
                   }
 
-    return random_search(clf, param_set, train_indices, test_indices, input_data, target_data)
+    return random_search(clf, param_set, train_indices, test_indices, validation_indices, input_data, target_data)
 
 
-def gradient_boosting_fitting(input_data, target_data, train_indices, test_indices, strategy_dictionary):
+def gradient_boosting_fitting(
+        input_data, target_data, train_indices, test_indices, validation_indices, strategy_dictionary):
     if strategy_dictionary['regression_mode'] == 'regression':
         clf = GradientBoostingRegressor()
     elif strategy_dictionary['regression_mode'] == 'classification':
@@ -63,10 +65,10 @@ def gradient_boosting_fitting(input_data, target_data, train_indices, test_indic
                  'learning_rate': [0.1, 0.25, 0.5, 1.0],
                  }
 
-    return random_search(clf, param_set, train_indices, test_indices, input_data, target_data)
+    return random_search(clf, param_set, train_indices, test_indices, validation_indices, input_data, target_data)
 
 
-def extra_trees_fitting(input_data, target_data, train_indices, test_indices, strategy_dictionary):
+def extra_trees_fitting(input_data, target_data, train_indices, test_indices, validation_indices, strategy_dictionary):
     if strategy_dictionary['regression_mode'] == 'regression':
         clf = ExtraTreesRegressor(n_jobs=-1)
     elif strategy_dictionary['regression_mode'] == 'classification':
@@ -76,24 +78,29 @@ def extra_trees_fitting(input_data, target_data, train_indices, test_indices, st
                  'max_depth': [1, 2, 3, None],
                  }
 
-    return random_search(clf, param_set, train_indices, test_indices, input_data, target_data)
+    return random_search(clf, param_set, train_indices, test_indices, validation_indices, input_data, target_data)
 
 
-def tensorflow_fitting(train_indices, test_indices, input_data, target_data):
+def tensorflow_fitting(train_indices, test_indices, validation_indices, input_data, target_data):
     classifier = learn.DNNRegressor(
         feature_columns=[tf.contrib.layers.real_valued_column("", dimension=input_data.shape[1])],
         hidden_units=[2048, 1024, 512, 256, 128, 64])
 
     classifier.fit(input_fn=lambda : input_fn(input_data[train_indices], target_data[train_indices]), steps=2000)
 
-    training_strategy_score = list(classifier.predict(input_data[train_indices]))
-    fitted_strategy_score = list(classifier.predict(input_data[test_indices]))
+    training_strategy_score = list(classifier.predict(
+        input_fn=lambda : input_fn(input_data[train_indices], target_data[train_indices])))
+    fitted_strategy_score = list(classifier.predict(
+        input_fn=lambda : input_fn(input_data[train_indices], target_data[test_indices])))
+    validation_strategy_score = list(classifier.predict(
+        input_fn=lambda : input_fn(input_data[train_indices], target_data[validation_indices])))
 
     error = mean_squared_error(target_data[train_indices], training_strategy_score)
 
     fitting_dictionary = {
         'training_strategy_score': training_strategy_score,
         'fitted_strategy_score': fitted_strategy_score,
+        'validation_strategy_score': validation_strategy_score,
         'error': error,
     }
 
@@ -101,7 +108,7 @@ def tensorflow_fitting(train_indices, test_indices, input_data, target_data):
 
 
 def tensorflow_sequence_fitting(
-        output_dir, train_indices, test_indices, X, y, strategy_dictionary, train_steps=1000):
+        output_dir, train_indices, test_indices, validation_indices, X, y, strategy_dictionary, train_steps=1000):
     X = X.astype(np.float32)
     y = y.astype(np.float32)
 
@@ -154,12 +161,14 @@ def tensorflow_sequence_fitting(
 
     train_score = [i['results'] for i in xp.estimator.predict(numpy_input_fn({'x': X[train_indices]}, shuffle=False))]
     predicted = [i['results'] for i in xp.estimator.predict(numpy_input_fn({'x': X[test_indices]}, shuffle=False))]
+    validation = [i['results'] for i in xp.estimator.predict(numpy_input_fn({'x': X[validation_indices]}, shuffle=False))]
 
     error = mean_squared_error(y[train_indices], train_score)
 
     fitting_dictionary = {
         'training_strategy_score': np.concatenate(train_score, axis=0),
         'fitted_strategy_score': np.concatenate(predicted, axis=0),
+        'validation_strategy_score': np.concatenate(validation, axis=0),
         'error': error,
     }
 
@@ -170,7 +179,7 @@ def input_fn(input, target):
     return tf.constant(input), tf.constant(target)
 
 
-def random_search(clf, param_set, train_indices, test_indices, input_data, target_data):
+def random_search(clf, param_set, train_indices, test_indices, validation_indices, input_data, target_data):
     random_search_local = RandomizedSearchCV(clf, param_distributions=param_set, cv=5, n_jobs=-1)
 
     random_search_local.fit(input_data[train_indices], target_data[train_indices])
@@ -181,12 +190,14 @@ def random_search(clf, param_set, train_indices, test_indices, input_data, targe
 
     if len(test_indices) != 0:
         fitted_strategy_score = random_search_local.predict(input_data[test_indices])
+        validation_strategy_score = random_search_local.predict(input_data[validation_indices])
     else:
         fitted_strategy_score = []
 
     fitting_dictionary = {
         'training_strategy_score': training_strategy_score,
         'fitted_strategy_score': fitted_strategy_score,
+        'validation_strategy_score': validation_strategy_score,
         'model': random_search,
     }
     return fitting_dictionary, error

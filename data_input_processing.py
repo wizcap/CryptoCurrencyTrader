@@ -420,9 +420,9 @@ def train_test_indices(input_data, train_factor):
     return train_indices_local, test_indices_local
 
 
-def train_test_validation_indices(input_data):
-    train_factor = 0.5
-    test_factor = 0.25
+def train_test_validation_indices(input_data, ratios):
+    train_factor = ratios[0]
+    test_factor = ratios[1]
     data_length = len(input_data)
     train_indices_local = range(0, int(data_length * train_factor))
     test_indices_local = range(train_indices_local[-1] + 1, int(data_length * (train_factor + test_factor)))

@@ -1,6 +1,6 @@
 import numpy as np
 from time import time
-from data_input_processing import Data, train_test_indices, generate_training_variables
+from data_input_processing import Data, train_test_validation_indices, generate_training_variables
 from strategy_evaluation import post_process_training_results, output_strategy_results
 from machine_learning import random_forest_fitting, svm_fitting, adaboost_fitting, gradient_boosting_fitting,\
     extra_trees_fitting, tensorflow_fitting, tensorflow_sequence_fitting
@@ -10,29 +10,31 @@ SEC_IN_DAY = 86400
 
 def meta_fitting(fitting_inputs, fitting_targets, strategy_dictionary):
     error = []
-    train_indices, test_indices = train_test_indices(fitting_inputs, strategy_dictionary['train_test_ratio'])
+    train_indices, test_indices, validation_indices = train_test_validation_indices(
+        fitting_inputs, strategy_dictionary['train_test_validation_ratios'])
     if strategy_dictionary['ml_mode'] == 'svm':
         fitting_dictionary, error = svm_fitting(
-            fitting_inputs, fitting_targets, train_indices, test_indices, strategy_dictionary)
+            fitting_inputs, fitting_targets, train_indices, test_indices, validation_indices, strategy_dictionary)
 
     elif strategy_dictionary['ml_mode'] == 'randomforest':
         fitting_dictionary, error = random_forest_fitting(
-            fitting_inputs, fitting_targets, train_indices, test_indices, strategy_dictionary)
+            fitting_inputs, fitting_targets, train_indices, test_indices, validation_indices, strategy_dictionary)
 
     elif strategy_dictionary['ml_mode'] == 'adaboost':
         fitting_dictionary, error = adaboost_fitting(
-            fitting_inputs, fitting_targets, train_indices, test_indices, strategy_dictionary)
+            fitting_inputs, fitting_targets, train_indices, test_indices, validation_indices, strategy_dictionary)
 
     elif strategy_dictionary['ml_mode'] == 'gradientboosting':
         fitting_dictionary, error = gradient_boosting_fitting(
-            fitting_inputs, fitting_targets, train_indices, test_indices, strategy_dictionary)
+            fitting_inputs, fitting_targets, train_indices, test_indices, validation_indices, strategy_dictionary)
 
     elif strategy_dictionary['ml_mode'] == 'extratreesfitting':
         fitting_dictionary, error = extra_trees_fitting(
-            fitting_inputs, fitting_targets, train_indices, test_indices, strategy_dictionary)
+            fitting_inputs, fitting_targets, train_indices, test_indices, validation_indices, strategy_dictionary)
 
     fitting_dictionary['train_indices'] = train_indices
     fitting_dictionary['test_indices'] = test_indices
+    fitting_dictionary['validation_indices'] = validation_indices
     fitting_dictionary['error'] = error
 
     return fitting_dictionary
@@ -152,17 +154,21 @@ def fit_strategy(strategy_dictionary, data_to_predict, data_2, fitting_inputs, f
 def fit_tensorflow(strategy_dictionary, data_to_predict, fitting_inputs, fitting_targets):
     toc = tic()
 
-    train_indices, test_indices = train_test_indices(fitting_inputs, strategy_dictionary['train_test_ratio'])
+    train_indices, test_indices, validation_indices = train_test_validation_indices(
+        fitting_inputs, strategy_dictionary['train_test_validation_ratios'])
 
     if strategy_dictionary['sequence_flag']:
         fitting_dictionary, error = tensorflow_sequence_fitting(
-            '/home/thomas/test',train_indices, test_indices, fitting_inputs, fitting_targets, strategy_dictionary)
+            '/home/thomas/test',train_indices, test_indices, validation_indices, fitting_inputs, fitting_targets,
+            strategy_dictionary)
 
     else:
-        fitting_dictionary, error = tensorflow_fitting(train_indices, test_indices, fitting_inputs, fitting_targets)
+        fitting_dictionary, error = tensorflow_fitting(train_indices, test_indices, validation_indices, fitting_inputs,
+                                                       fitting_targets)
 
     fitting_dictionary['train_indices'] = train_indices
     fitting_dictionary['test_indices'] = test_indices
+    fitting_dictionary['validation_indices'] = validation_indices
 
     fitting_dictionary = post_process_training_results(strategy_dictionary, fitting_dictionary, data_to_predict)
 
