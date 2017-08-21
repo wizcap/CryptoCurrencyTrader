@@ -40,13 +40,13 @@ With none of the different automated machine learning optimisation strategies wa
 
 #Setup
 To run as a standalone script add a file named API_settings.py containing your poloniex API, google and reddit API login:
-poloniex_API_key = ""
-poloniex_API_secret = ""
-google_username = ""
-google_password = ""
-client_id = ""
-client_secret = ""
-user_agent = 'Python Scraping App'
+poloniex_API_key = ""  
+poloniex_API_secret = ""  
+google_username = ""  
+google_password = ""  
+client_id = ""  
+client_secret = ""  
+user_agent = 'Python Scraping App'  
 
 ## Python 2.7 + Tensorflow + MiniConda
 https://conda.io/docs/installation.html    
