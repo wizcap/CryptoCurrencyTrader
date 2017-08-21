@@ -1,5 +1,5 @@
 # CryptoCurrencyTrader
-A machine learning program in python to generate cryptocurrency trading strategies using machine and deep learning on price and scraped forum sentiment data (using natural language processing). Based on Sklearn and Tensorflow.
+A machine learning program in python to generate cryptocurrency trading strategies using machine and deep learning on price, hash rates, google trends and scraped forum sentiment data (using natural language processing). Based on Sklearn and Tensorflow.
 The script is inspired by both the pytrader project https://github.com/owocki/pytrader, and the auto-sklearn project https://automl.github.io/auto-sklearn/stable/. 
 
 # Disclaimer
@@ -7,7 +7,7 @@ The information in this repository is provided for information purposes only. Th
 
 ## Input Data
 Minor changes were made to the Poloniex API python wrapper which is inluded in the repository https://github.com/s4w3d0ff/python-poloniex. Data is retrieved via the Poloniex API in OHLC (open, high, low, close) candlestick format along with volume data.
-A series of non price data are also provided, google trends data are pulled using the pytrends psuedo API and the web scraping and reddit and bitcointalk forum data is supplied using the natural language processing sentiment analysis package from here https://github.com/llens/CryptocurrencyWebScrapingAndSentimentAnalysis.
+A series of non price data are also provided, hash rates, google trends data are pulled using the pytrends psuedo API and the web scraping and reddit and bitcointalk forum data is supplied using the natural language processing sentiment analysis package from here https://github.com/llens/CryptocurrencyWebScrapingAndSentimentAnalysis. 
 
 Alternatively price and volume data can be supplied in the form of .csv files by including them in the working directory, setting web_flag as false and supplying the filenames as filename1 and filename2, (filename1 will be the currency pair used for trading).
 
