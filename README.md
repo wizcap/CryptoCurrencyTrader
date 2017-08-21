@@ -1,5 +1,5 @@
 # CryptoCurrencyTrader
-A machine learning program in python to generate cryptocurrency trading strategies using machine learning.
+A machine learning program in python to generate cryptocurrency trading strategies using machine and deep learning on price and forum sentiment data (using natural language processing). Based on Sklearn and Tensorflow.
 The script is inspired by both the pytrader project https://github.com/owocki/pytrader, and the auto-sklearn project https://automl.github.io/auto-sklearn/stable/. 
 
 # Disclaimer
