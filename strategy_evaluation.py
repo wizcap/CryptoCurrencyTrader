@@ -115,7 +115,7 @@ def draw_down(strategy_profit_local):
 
 
 def output_strategy_results(strategy_dictionary, fitting_dictionary, data_to_predict, toc):
-    prediction_data = data_to_predict.close[fitting_dictionary['test_indices']]
+    prediction_data = data_to_predict.close[fitting_dictionary['validation_indices']]
 
     if strategy_dictionary['output_flag']:
         print "Fitting time: ", toc()
@@ -137,10 +137,9 @@ def output_strategy_results(strategy_dictionary, fitting_dictionary, data_to_pre
         plt.figure(1)
         close_price = plt.plot(prediction_data)
         portfolio_value = plt.plot(prediction_data[0] * fitting_dictionary['portfolio_value'])
-        plt.title('Trading over 10 days')
         plt.legend([close_price, portfolio_value], ['Close Price', 'Portfolio Value'])
         plt.xlabel('Candle number')
-        plt.ylabel('Ethereum - bitcoin exchange rate')
+        plt.ylabel('USDT-Bitcoin exchange rate')
         plt.show()
     
     return profit_factor

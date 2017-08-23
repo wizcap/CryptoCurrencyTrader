@@ -69,10 +69,10 @@ if __name__ == '__main__':
         'web_flag': True,
         'filename1': "USDT_BTC.csv",
         'filename2': "BTC_ETH.csv",
-        'scraper_page_limit': 50,
+        'scraper_page_limit': 20,
     }
 
-    search_iterations = 50
+    search_iterations = 10
 
     strategy_dictionary, fitting_inputs, fitting_targets, data_to_predict = random_search(
         strategy_dictionary, search_iterations)

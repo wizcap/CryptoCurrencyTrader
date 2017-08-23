@@ -67,7 +67,7 @@ if __name__ == '__main__':
         'scraper_currency_1': 'BTC',
         'scraper_currency_2': 'ETH',
         'candle_size': 1800,
-        'n_days': 40,
+        'n_days': 180,
         'offset': 0,
         'bid_ask_spread': 0.004,
         'transaction_fee': 0.0025,
