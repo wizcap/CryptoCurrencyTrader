@@ -93,7 +93,7 @@ def retrieve_data(ticker, scraper_currency, strategy_dictionary, filename):
     return data_local
 
 
-def offset_scan_validation(strategy_dictionary, offsets):
+def offset_scan_validation(strategy_dictionary, data_to_predict, fitting_inputs, fitting_targets, offsets):
     strategy_dictionary['plot_flag'] = False
     strategy_dictionary['ouput_flag'] = True
 
@@ -102,8 +102,9 @@ def offset_scan_validation(strategy_dictionary, offsets):
 
     for offset in offsets:
         strategy_dictionary['offset'] = offset
-        fitting_dictionary, data_to_predict, error, profit_fraction = fit_strategy(strategy_dictionary)
-        total_error += error / len(offsets)
+        fitting_dictionary,  profit_fraction = fit_strategy(
+            strategy_dictionary, data_to_predict, fitting_inputs, fitting_targets)
+        total_error += fitting_dictionary['error'] / len(offsets)
         total_profit += profit_fraction
 
     underlined_output('Averages: ')
@@ -111,7 +112,7 @@ def offset_scan_validation(strategy_dictionary, offsets):
     print 'Average error: ', total_error
 
 
-def tensorflow_offset_scan_validation(strategy_dictionary, offsets):
+def tensorflow_offset_scan_validation(strategy_dictionary, data_to_predict, fitting_inputs, fitting_targets, offsets):
     strategy_dictionary['plot_flag'] = False
     strategy_dictionary['ouput_flag'] = True
     
@@ -120,7 +121,8 @@ def tensorflow_offset_scan_validation(strategy_dictionary, offsets):
 
     for offset in offsets:
         strategy_dictionary['offset'] = offset
-        fitting_dictionary, data_to_predict, error, profit_fraction = fit_tensorflow(strategy_dictionary)
+        fitting_dictionary, error, profit_fraction = fit_tensorflow(
+            strategy_dictionary, data_to_predict, fitting_inputs, fitting_targets)
         total_error += error
         total_profit += profit_fraction
 
@@ -139,7 +141,7 @@ def import_data(strategy_dictionary):
     return data_to_predict, data_2
 
 
-def fit_strategy(strategy_dictionary, data_to_predict, data_2, fitting_inputs, fitting_targets):
+def fit_strategy(strategy_dictionary, data_to_predict, fitting_inputs, fitting_targets):
     toc = tic()
 
     fitting_dictionary = meta_fitting(fitting_inputs, fitting_targets, strategy_dictionary)

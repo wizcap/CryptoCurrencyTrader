@@ -17,7 +17,7 @@ def random_search(strategy_dictionary_local, n_iterations):
     while counter < n_iterations:
         counter += 1
 
-        strategy_dictionary['sequence_flag'] = np.random.choice([True, False])
+        #strategy_dictionary['sequence_flag'] = np.random.choice([True, False])
 
         if strategy_dictionary['sequence_flag']:
             strategy_dictionary_local = randomise_sequence_dictionary_inputs(strategy_dictionary_local)
@@ -43,7 +43,7 @@ def random_search(strategy_dictionary_local, n_iterations):
     underlined_output('Best strategy fit')
     output_strategy_results(strategy_dictionary_optimum, fitting_dictionary_optimum, data_to_predict, toc)
 
-    return strategy_dictionary_optimum
+    return strategy_dictionary_optimum, data_to_predict, fitting_inputs, fitting_targets
 
 
 def randomise_dictionary_inputs(strategy_dictionary):
@@ -67,11 +67,11 @@ if __name__ == '__main__':
         'scraper_currency_1': 'BTC',
         'scraper_currency_2': 'ETH',
         'candle_size': 1800,
-        'n_days': 10, #TEST
+        'n_days': 40,
         'offset': 0,
         'bid_ask_spread': 0.004,
         'transaction_fee': 0.0025,
-        'train_test_ratio': 0.75,
+        'train_test_validation_ratios': [0.5, 0.25, 0.25],
         'output_flag': True,
         'plot_flag': False,
         'target_score': 'idealstrategy',
@@ -84,17 +84,18 @@ if __name__ == '__main__':
         'web_flag': True,
         'filename1': "USDT_BTC.csv",
         'filename2': "BTC_ETH.csv",
-        'scraper_page_limit': 2, #TEST
+        'scraper_page_limit': 10,
     }
 
-    search_iterations = 10
+    search_iterations = 5
 
-    strategy_dictionary = random_search(strategy_dictionary, search_iterations)
+    strategy_dictionary, data_to_predict, fitting_inputs, fitting_targets = random_search(
+        strategy_dictionary, search_iterations)
 
     underlined_output('Offset validation')
     offsets = np.linspace(0, 100, 5)
 
-    tensorflow_offset_scan_validation(strategy_dictionary, offsets)
+    tensorflow_offset_scan_validation(strategy_dictionary, data_to_predict, fitting_inputs, fitting_targets, offsets)
 
     print strategy_dictionary
     

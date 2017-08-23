@@ -82,18 +82,23 @@ def extra_trees_fitting(input_data, target_data, train_indices, test_indices, va
 
 
 def tensorflow_fitting(train_indices, test_indices, validation_indices, input_data, target_data):
+    layers = 6
+    hidden_units = []
+    for i in range(layers):
+        hidden_units.append(2 ** (5 + layers - i))
+
     classifier = learn.DNNRegressor(
         feature_columns=[tf.contrib.layers.real_valued_column("", dimension=input_data.shape[1])],
-        hidden_units=[2048, 1024, 512, 256, 128, 64])
+        hidden_units=hidden_units)
 
     classifier.fit(input_fn=lambda : input_fn(input_data[train_indices], target_data[train_indices]), steps=2000)
 
     training_strategy_score = list(classifier.predict(
         input_fn=lambda : input_fn(input_data[train_indices], target_data[train_indices])))
     fitted_strategy_score = list(classifier.predict(
-        input_fn=lambda : input_fn(input_data[train_indices], target_data[test_indices])))
+        input_fn=lambda : input_fn(input_data[test_indices], target_data[test_indices])))
     validation_strategy_score = list(classifier.predict(
-        input_fn=lambda : input_fn(input_data[train_indices], target_data[validation_indices])))
+        input_fn=lambda : input_fn(input_data[validation_indices], target_data[validation_indices])))
 
     error = mean_squared_error(target_data[train_indices], training_strategy_score)
 
@@ -161,7 +166,8 @@ def tensorflow_sequence_fitting(
 
     train_score = [i['results'] for i in xp.estimator.predict(numpy_input_fn({'x': X[train_indices]}, shuffle=False))]
     predicted = [i['results'] for i in xp.estimator.predict(numpy_input_fn({'x': X[test_indices]}, shuffle=False))]
-    validation = [i['results'] for i in xp.estimator.predict(numpy_input_fn({'x': X[validation_indices]}, shuffle=False))]
+    validation = [i['results'] for i in xp.estimator.predict(numpy_input_fn(
+        {'x': X[validation_indices]}, shuffle=False))]
 
     error = mean_squared_error(y[train_indices], train_score)
 

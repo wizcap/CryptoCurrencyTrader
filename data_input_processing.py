@@ -5,7 +5,7 @@ from sklearn.preprocessing import Imputer,scale
 from sklearn.decomposition import PCA, FastICA
 from poloniex_API import poloniex
 from API_settings import poloniex_API_secret, poloniex_API_key
-from non_price_data import google_trends_interest_over_time, initialise_google_session
+from non_price_data import google_trends_interest_over_time, initialise_google_session, hash_rate
 from vendor.web_scraper import scrape_subreddits, scrape_forums
 from vendor.sentiment_analysis import analyse_sentiments
 SEC_IN_DAY = 86400
@@ -32,6 +32,7 @@ class Data:
         self.low = []
         self.volume = []
         self.time = []
+        self.hash_rates = []
         self.google_trend_score = []
         self.web_sentiment_score = []
         self.fractional_close = []
@@ -163,8 +164,13 @@ class Data:
         self.non_price_data(strategy_dictionary, prior_data_obj=prior_data_obj)
 
     def non_price_data(self, strategy_dictionary, prior_data_obj=None):
+        self.hash_rate_data()
         self.google_trend_data(strategy_dictionary)
         self.web_scraping_sentiment_analysis(strategy_dictionary, prior_data_obj=prior_data_obj)
+
+    def hash_rate_data(self):
+        hash_rates, dates = hash_rate()
+        self.hash_rates = fractional_change(np.interp(self.date, dates, hash_rates))
 
     def google_trend_data(self, strategy_dictionary):
         pytrend = initialise_google_session()
@@ -173,13 +179,13 @@ class Data:
         if 'USDT' in search_terms:
             del search_terms[search_terms == 'USDT']
 
-        self.google_trend_score = np.zeros((len(self.date), len(search_terms)))
+        self.google_trend_score = np.zeros((len(self.date) - 1, len(search_terms)))
 
         for i in range(len(search_terms)):
             search_term = SYMBOL_DICTIONARY[search_terms[i]]
             dates, interest = google_trends_interest_over_time(pytrend, [search_term,])
 
-            self.google_trend_score[:, i] = np.interp(self.date, dates, interest)
+            self.google_trend_score[:, i] = fractional_change(np.interp(self.date, dates, interest))
 
     def web_scraping_sentiment_analysis(self, strategy_dictionary, prior_data_obj=None):
         subreddits = ["cryptocurrency", "cryptomarkets", "bitcoin", "bitcoinmarkets", "ethereum"]
@@ -207,7 +213,7 @@ class Data:
 
         sentiments, dates = sort_arrays_by_first(dates, sentiments)
 
-        self.web_sentiment_score = np.interp(self.date, dates, sentiments)
+        self.web_sentiment_score = fractional_change(np.interp(self.date, dates, sentiments))
 
         logging.getLogger().setLevel(logging.WARNING)
 
@@ -363,8 +369,9 @@ def generate_training_variables(data_obj, strategy_dictionary, prior_data_obj=No
         #pad_nan(data_obj.open[:-3], 2),
         #pad_nan(data_obj.high[:-3], 2),
         #pad_nan(data_obj.low[:-3], 2),
-        data_obj.google_trend_score[:-2].T,
-        data_obj.web_sentiment_score[:-2]
+        data_obj.google_trend_score[:-1].T,
+        data_obj.web_sentiment_score[:-1],
+        data_obj.hash_rates[:-1]
         ))
 
     fitting_inputs = fitting_inputs.T

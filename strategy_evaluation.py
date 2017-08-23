@@ -5,6 +5,7 @@ from matplotlib import pyplot as plt
 def strategy_profit(currency_position, fractional_price, strategy_dictionary):
     buy_sell_length = len(currency_position)
     portfolio_value = np.ones(buy_sell_length)
+
     for index in range(1, buy_sell_length):
         if ((currency_position[index - 1] == 0) & (currency_position[index] == 1))\
                 | ((currency_position[index - 1] == 1) & (currency_position[index] == 0)):
@@ -58,13 +59,13 @@ def convert_strategy_score_to_profit(strategy_local, buy_threshold, sell_thresho
 def post_process_regression_results(fitting_dictionary, strategy_dictionary, fractional_close):
     profit_optimum = -1e5
 
-    for buy_threshold in np.linspace(min(fitting_dictionary['training_strategy_score']),
-                                     max(fitting_dictionary['training_strategy_score']), 20):
-        for sell_threshold in np.linspace(min(fitting_dictionary['training_strategy_score']),
-                                          max(fitting_dictionary['training_strategy_score']), 20):
+    for buy_threshold in np.linspace(min(fitting_dictionary['fitted_strategy_score']),
+                                     max(fitting_dictionary['fitted_strategy_score']), 50):
+        for sell_threshold in np.linspace(min(fitting_dictionary['fitted_strategy_score']),
+                                          max(fitting_dictionary['fitted_strategy_score']), 50):
             portfolio_value, n_trades = convert_strategy_score_to_profit(
-                (fitting_dictionary['training_strategy_score']), buy_threshold, sell_threshold,
-                fractional_close[fitting_dictionary['train_indices']], strategy_dictionary)
+                (fitting_dictionary['fitted_strategy_score']), buy_threshold, sell_threshold,
+                fractional_close[fitting_dictionary['test_indices']], strategy_dictionary)
 
             profit_fraction = strategy_profit_score(portfolio_value, n_trades)
 
@@ -75,7 +76,7 @@ def post_process_regression_results(fitting_dictionary, strategy_dictionary, fra
                 profit_optimum = profit_fraction
 
     fitting_dictionary['portfolio_value'], fitting_dictionary['n_trades'] = convert_strategy_score_to_profit(
-        (fitting_dictionary['fitted_strategy_score']), fitting_dictionary['buy_threshold'],
+        (fitting_dictionary['validation_strategy_score']), fitting_dictionary['buy_threshold'],
         fitting_dictionary['sell_threshold'], fractional_close[fitting_dictionary['validation_indices']],
         strategy_dictionary)
 
@@ -83,7 +84,7 @@ def post_process_regression_results(fitting_dictionary, strategy_dictionary, fra
 
 
 def post_process_classification_results(fitting_dictionary, strategy_dictionary, fractional_close):
-    fitted_currency_position = convert_to_currency_position(fitting_dictionary['fitted_strategy_score'])
+    fitted_currency_position = convert_to_currency_position(fitting_dictionary['validation_strategy_score'])
     number_of_trades = number_of_trades_from_currency_position(fitted_currency_position)
 
     fitting_dictionary['portfolio_value'] = strategy_profit(fitted_currency_position, fractional_close[

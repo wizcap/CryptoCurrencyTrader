@@ -9,9 +9,9 @@ from strategy_evaluation import output_strategy_results
 def random_search(strategy_dictionary_local, n_iterations):
     toc = tic()
 
-    data_to_predict, data_2 = import_data(strategy_dictionary)
-    fitting_inputs, continuous_targets, classification_targets = input_processing(
-        data_to_predict, data_2, strategy_dictionary)
+    data_local, data_2 = import_data(strategy_dictionary)
+    fitting_inputs_local, continuous_targets, classification_targets = input_processing(
+        data_local, data_2, strategy_dictionary)
 
     counter = 0
     error = 1e5
@@ -20,14 +20,14 @@ def random_search(strategy_dictionary_local, n_iterations):
         strategy_dictionary_local = randomise_dictionary_inputs(strategy_dictionary_local)
 
         if strategy_dictionary['regression_mode'] == 'classification':
-            fitting_targets = classification_targets
+            fitting_targets_local = classification_targets
         elif strategy_dictionary['regression_mode'] == 'regression':
-            fitting_targets = continuous_targets
+            fitting_targets_local = continuous_targets
 
-        fitting_inputs = preprocessing_inputs(strategy_dictionary, fitting_inputs)
+        fitting_inputs_local = preprocessing_inputs(strategy_dictionary, fitting_inputs_local)
 
-        fitting_dictionary, profit_factor = fit_strategy(strategy_dictionary_local, data_to_predict, data_2,
-                                                         fitting_inputs, fitting_targets)
+        fitting_dictionary, profit_factor = fit_strategy(
+            strategy_dictionary, data_local, fitting_inputs_local, fitting_targets_local)
         error_loop = fitting_dictionary['error']
 
         if error_loop < error and fitting_dictionary['n_trades'] != 0:
@@ -36,9 +36,9 @@ def random_search(strategy_dictionary_local, n_iterations):
             fitting_dictionary_optimum = fitting_dictionary
 
     underlined_output('Best strategy fit')
-    output_strategy_results(strategy_dictionary_local_optimum, fitting_dictionary_optimum, data_to_predict, toc)
+    output_strategy_results(strategy_dictionary_local_optimum, fitting_dictionary_optimum, data_local, toc)
 
-    return strategy_dictionary_local_optimum
+    return strategy_dictionary_local_optimum, fitting_inputs_local, fitting_targets_local, data_local
 
 
 def randomise_dictionary_inputs(strategy_dictionary_local):
@@ -56,29 +56,30 @@ if __name__ == '__main__':
         'scraper_currency_1': 'BTC',
         'scraper_currency_2': 'ETH',
         'candle_size': 1800,
-        'n_days': 20,
+        'n_days': 180,
         'offset': 0,
         'bid_ask_spread': 0.004,
         'transaction_fee': 0.0025,
         'train_test_validation_ratios': [0.5, 0.25, 0.25],
         'output_flag': True,
         'plot_flag': False,
-        'ml_iterations': 10,
+        'ml_iterations': 50,
         'target_score': 'idealstrategy',
         'windows': [10, 50, 100],
         'web_flag': True,
         'filename1': "USDT_BTC.csv",
         'filename2': "BTC_ETH.csv",
-        'scraper_page_limit': 20,
+        'scraper_page_limit': 50,
     }
 
     search_iterations = 50
 
-    strategy_dictionary = random_search(strategy_dictionary, search_iterations)
+    strategy_dictionary, fitting_inputs, fitting_targets, data_to_predict = random_search(
+        strategy_dictionary, search_iterations)
 
     underlined_output('Offset validation')
     offsets = np.linspace(0, 300, 5)
 
-    offset_scan_validation(strategy_dictionary, offsets)
+    offset_scan_validation(strategy_dictionary, data_to_predict, fitting_inputs, fitting_targets, offsets)
 
     print strategy_dictionary
