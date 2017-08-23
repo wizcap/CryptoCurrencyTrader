@@ -6,18 +6,18 @@ The script is inspired by both the pytrader project https://github.com/owocki/py
 The information in this repository is provided for information purposes only. The Information is not intended to be and does not constitute financial advice or any other advice, is general in nature and not specific to you.
 
 ## Input Data
-Minor changes were made to the Poloniex API python wrapper which is inluded in the repository https://github.com/s4w3d0ff/python-poloniex. Data is retrieved via the Poloniex API in OHLC (open, high, low, close) candlestick format along with volume data.
-A series of non price data are also provided, hash rates, google trends data are pulled using the pytrends psuedo API and the web scraping and reddit and bitcointalk forum data is supplied using the natural language processing sentiment analysis package from here https://github.com/llens/CryptocurrencyWebScrapingAndSentimentAnalysis. 
+Minor changes were made to the Poloniex API python wrapper which is included in the repository https://github.com/s4w3d0ff/python-poloniex. Data is retrieved via the Poloniex API in OHLC (open, high, low, close) candlestick format along with volume data.
+A series of non-price data are also provided, hash rates, google trends data are pulled using the pytrends pseudo API and the web scraping and reddit and bitcointalk forum data is supplied using the natural language processing sentiment analysis package from here https://github.com/llens/CryptocurrencyWebScrapingAndSentimentAnalysis. 
 
-Alternatively price and volume data can be supplied in the form of .csv files by including them in the working directory, setting web_flag as false and supplying the filenames as filename1 and filename2, (filename1 will be the currency pair used for trading).
+Alternatively, price and volume data can be supplied in the form of .csv files by including them in the working directory, setting web_flag as false and supplying the filenames as filename1 and filename2, (filename1 will be the currency pair used for trading).
 
 
 ### Technical Indicators - Training Inputs
-A series of technical indicators are calculated and provided as inputs to the machine learning optimisation, exponential moving averages, exponential moving volatilities and exponential moving volumes over a series of windows. A kalman filter is also provided as an input.
+A series of technical indicators are calculated and provided as inputs to the machine learning optimisation, exponential moving averages, exponential moving volatilities and exponential moving volumes over a series of windows. A Kalman filter is also provided as an input.
 
 
 ### Training Targets - Strategy Score
-An ideal trading strategy is generated based on past data, every candlestick is given a score which represent the potential profit or loss before the next price reversal exceeding the combined transaction fee and bid ask spread. This minimum price reversal is represented by Δp in the diagram below.
+An ideal trading strategy is generated based on past data, every candlestick is given a score which represents the potential profit or loss before the next price reversal exceeding the combined transaction fee and bid ask spread. This minimum price reversal is represented by Δp in the diagram below.
 ![Alt text](strategyscore.jpg?raw=true "Optional Title")
 
 ### Strategy Generation
@@ -32,7 +32,7 @@ With none of the different automated machine learning optimisation strategies wa
 ![Alt text](Fitting_example.png?raw=true "Optional Title")
 
 ## Validation
-In order to estimate the amount of overfitting, a series of offset hyperparameter fittings are performed. If the trading strategy is not overfit, fitting should be approximately consistent across at all offsets in terms of profit fraction and fitting error.
+In order to estimate the amount of overfitting, a series of offset hyperparameter fittings are performed. If the trading strategy is not overfitted, fitting should be approximately consistent across at all offsets in terms of profit fraction and fitting error.
 
 ## To Do
 With none of the different automated machine learning optimisation strategies was I able to get a set of fitting parameters which was consistently profitable at multiple offsets.
