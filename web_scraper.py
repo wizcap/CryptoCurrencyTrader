@@ -10,7 +10,7 @@ from scrapy.crawler import CrawlerProcess
 from scrapy.spiders import Rule
 from scrapy.exceptions import CloseSpider
 from scrapy.linkextractors import LinkExtractor
-from API_settings import client_id, client_secret, user_agent
+from reddit_API_settings import client_id, client_secret, user_agent
 
 date_word_list = [
     'January', 'February', 'March', 'April', 'May', 'June', 'July', 'August', 'September', 'October', 'November',
@@ -35,7 +35,7 @@ class ForumSpider(scrapy.Spider):
             yield scrapy.Request(url=link.url, callback=self.read_posts_bitcointalk)
 
     def read_posts_bitcointalk(self, response):
-        url_post_string = ['topic',]
+        url_post_string = ['topic', ]
 
         if any(substring in response.url for substring in url_post_string):
             self.pages_crawled += 1
@@ -89,7 +89,7 @@ class ForumSpider(scrapy.Spider):
 def convert_date_to_unix_time(date_local):
     if 'Today at ' in date_local:
         date_local = date_local.replace('Today at ', '')
-        midnight = mktime(datetime.combine(date.today(), time.min).timetuple())
+        midnight = float(datetime.combine(date.today(), time.min))
         date_local = midnight + mktime(datetime.strptime(date_local, "%I:%M:%S %p").timetuple())
     else:
         date_local = mktime(datetime.strptime(date_local, "%B %d, %Y, %I:%M:%S %p").timetuple())
@@ -107,6 +107,7 @@ def scrape_forums(url, allowed_domain, max_pages):
 
     process.crawl(spider, start_urls=url, allow_domains=allowed_domain, max_pages=max_pages)
     process.start()
+    process.stop()
 
     with open("temp_date_output.txt", "r") as f1:
         dates = pickle.load(f1)
@@ -149,4 +150,3 @@ def scrape_subreddits(subreddits, submission_limit):
         texts_local += texts_temp
 
     return dates_local, texts_local
-
