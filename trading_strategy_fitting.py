@@ -10,6 +10,7 @@ SEC_IN_DAY = 86400
 
 def meta_fitting(fitting_inputs, fitting_targets, strategy_dictionary):
     error = []
+    fitting_dictionary = {}
     train_indices, test_indices, validation_indices = train_test_validation_indices(
         fitting_inputs, strategy_dictionary['train_test_validation_ratios'])
     if strategy_dictionary['ml_mode'] == 'svm':
@@ -85,7 +86,7 @@ def retrieve_data(ticker, scraper_currency, strategy_dictionary, filename):
                     ticker, scraper_currency, strategy_dictionary['candle_size'], strategy_dictionary['web_flag'],
                     offset=strategy_dictionary['offset'], filename=filename,
                     n_days=strategy_dictionary['n_days'])
-        except:
+        except Exception:
             pass
 
     data_local.normalise_data()
@@ -161,7 +162,7 @@ def fit_tensorflow(strategy_dictionary, data_to_predict, fitting_inputs, fitting
 
     if strategy_dictionary['sequence_flag']:
         fitting_dictionary, error = tensorflow_sequence_fitting(
-            '/home/thomas/test',train_indices, test_indices, validation_indices, fitting_inputs, fitting_targets,
+            '/home/thomas/test', train_indices, test_indices, validation_indices, fitting_inputs, fitting_targets,
             strategy_dictionary)
 
     else:

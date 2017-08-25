@@ -9,7 +9,7 @@ def strategy_profit(currency_position, fractional_price, strategy_dictionary):
     for index in range(1, buy_sell_length):
         if ((currency_position[index - 1] == 0) & (currency_position[index] == 1))\
                 | ((currency_position[index - 1] == 1) & (currency_position[index] == 0)):
-            portfolio_value[index] = (1  - strategy_dictionary['transaction_fee']
+            portfolio_value[index] = (1 - strategy_dictionary['transaction_fee']
                                       - strategy_dictionary['bid_ask_spread']) * portfolio_value[index - 1]
         elif (currency_position[index - 1] == 1) & (currency_position[index] == 1):
             portfolio_value[index] = portfolio_value[index - 1] * fractional_price[index - 1]
@@ -29,7 +29,7 @@ def convert_to_currency_position(buy_sell):
         
         while_counter = 0
         while (index + while_counter < buy_sell_length) and (buy_sell[index + while_counter] == 0):
-            currency_position[index + while_counter] = currency_position[index+ while_counter - 1]
+            currency_position[index + while_counter] = currency_position[index + while_counter - 1]
             while_counter += 1
             
     return currency_position
@@ -117,6 +117,7 @@ def draw_down(strategy_profit_local):
 def output_strategy_results(strategy_dictionary, fitting_dictionary, data_to_predict, toc):
     prediction_data = data_to_predict.close[fitting_dictionary['validation_indices']]
 
+    profit_factor = []
     if strategy_dictionary['output_flag']:
         print "Fitting time: ", toc()
         

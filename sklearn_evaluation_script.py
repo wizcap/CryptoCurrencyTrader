@@ -2,7 +2,7 @@ import numpy as np
 from random import choice
 from trading_strategy_fitting import fit_strategy, offset_scan_validation, tic, underlined_output, import_data,\
     input_processing
-from data_input_processing import  preprocessing_inputs
+from data_input_processing import preprocessing_inputs
 from strategy_evaluation import output_strategy_results
 
 
@@ -15,6 +15,9 @@ def random_search(strategy_dictionary_local, n_iterations):
 
     counter = 0
     error = 1e5
+    fitting_targets_local = []
+    fitting_dictionary_optimum = []
+    strategy_dictionary_optimum = []
     while counter < n_iterations:
         counter += 1
         strategy_dictionary_local = randomise_dictionary_inputs(strategy_dictionary_local)
@@ -32,17 +35,18 @@ def random_search(strategy_dictionary_local, n_iterations):
 
         if error_loop < error and fitting_dictionary['n_trades'] != 0:
             error = error_loop
-            strategy_dictionary_local_optimum = strategy_dictionary_local
+            strategy_dictionary_optimum = strategy_dictionary_local
             fitting_dictionary_optimum = fitting_dictionary
 
     underlined_output('Best strategy fit')
-    output_strategy_results(strategy_dictionary_local_optimum, fitting_dictionary_optimum, data_local, toc)
+    output_strategy_results(strategy_dictionary_optimum, fitting_dictionary_optimum, data_local, toc)
 
-    return strategy_dictionary_local_optimum, fitting_inputs_local, fitting_targets_local, data_local
+    return strategy_dictionary_optimum, fitting_inputs_local, fitting_targets_local, data_local
 
 
 def randomise_dictionary_inputs(strategy_dictionary_local):
-    strategy_dictionary_local['ml_mode'] = choice(['adaboost', 'randomforest', 'gradientboosting', 'extratreesfitting']) #'svm'
+    strategy_dictionary_local['ml_mode'] = choice(['adaboost', 'randomforest', 'gradientboosting', 'extratreesfitting'])
+    # 'svm'
     strategy_dictionary_local['regression_mode'] = choice(['regression', 'classification'])
     strategy_dictionary_local['preprocessing'] = choice(['PCA', 'FastICA', 'None'])
     return strategy_dictionary_local
@@ -69,10 +73,10 @@ if __name__ == '__main__':
         'web_flag': True,
         'filename1': "USDT_BTC.csv",
         'filename2': "BTC_ETH.csv",
-        'scraper_page_limit': 20,
+        'scraper_page_limit': 50,
     }
 
-    search_iterations = 10
+    search_iterations = 50
 
     strategy_dictionary, fitting_inputs, fitting_targets, data_to_predict = random_search(
         strategy_dictionary, search_iterations)

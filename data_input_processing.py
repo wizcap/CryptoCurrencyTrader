@@ -1,7 +1,7 @@
 import numpy as np
 import pandas as pd
 import logging
-from sklearn.preprocessing import Imputer,scale
+from sklearn.preprocessing import Imputer, scale
 from sklearn.decomposition import PCA, FastICA
 from poloniex_API import poloniex
 from API_settings import poloniex_API_secret, poloniex_API_key
@@ -54,6 +54,7 @@ class Data:
         self.scraper_currency = scraper_currency
         self.scraper_score_dates = []
         self.scraper_score_texts = []
+        self.classification_score = []
 
         if web_flag:
             self.candle_input_web(currency_pair, start, end, period)
@@ -153,11 +154,11 @@ class Data:
                                                                           strategy_dictionary['windows'][2])
 
         self.exponential_moving_volume_1 = exponential_moving_average(self.fractional_volume[:-1],
-                                                                          strategy_dictionary['windows'][0])
+                                                                      strategy_dictionary['windows'][0])
         self.exponential_moving_volume_2 = exponential_moving_average(self.fractional_volume[:-1],
-                                                                          strategy_dictionary['windows'][1])
+                                                                      strategy_dictionary['windows'][1])
         self.exponential_moving_volume_3 = exponential_moving_average(self.fractional_volume[:-1],
-                                                                          strategy_dictionary['windows'][2])
+                                                                      strategy_dictionary['windows'][2])
 
         self.kalman_signal = kalman_filter(self.close[:-2])
 
@@ -183,7 +184,7 @@ class Data:
 
         for i in range(len(search_terms)):
             search_term = SYMBOL_DICTIONARY[search_terms[i]]
-            dates, interest = google_trends_interest_over_time(pytrend, [search_term,])
+            dates, interest = google_trends_interest_over_time(pytrend, [search_term, ])
 
             self.google_trend_score[:, i] = fractional_change(np.interp(self.date, dates, interest))
 
@@ -224,27 +225,6 @@ class TradingTargets:
         self.high = normalise_data_obj.high
         self.strategy_score = np.full([len(self.fractional_close)], np.nan)
         self.buy_sell = []
-
-    def ideal_buy_sell(self, bid_ask_spread, transaction_fee):
-        effective_fee_factor = effective_fee(bid_ask_spread, transaction_fee)
-        fractional_close_length = len(self.fractional_close)
-
-        self.buy_sell = np.zeros(fractional_close_length)
-
-        for index in range(fractional_close_length):
-            while_counter = 0
-            net_change = 1.0
-            while (net_change * effective_fee_factor < 1) & (net_change > effective_fee_factor) \
-                    & (index + while_counter < fractional_close_length):
-                net_change *= self.fractional_close[index + while_counter]
-                while_counter += 1
-
-            if net_change * effective_fee_factor > 1:
-                self.buy_sell[index] = 1
-            elif net_change < effective_fee_factor:
-                self.buy_sell[index] = -1
-            elif index + while_counter == fractional_close_length:
-                self.buy_sell[index:] = 0
 
     def ideal_strategy_score(self, strategy_dictionary):
         effective_fee_factor = effective_fee(strategy_dictionary)
@@ -357,18 +337,18 @@ def generate_training_variables(data_obj, strategy_dictionary, prior_data_obj=No
         data_obj.exponential_moving_volume_2,
         data_obj.exponential_moving_volume_3,
         data_obj.kalman_signal,
-        #data_obj.close[:-1],
+        # data_obj.close[:-1],
         data_obj.open[:-2],
-        #data_obj.high[:-1],
-        #data_obj.low[:-1],
-        #pad_nan(data_obj.close[:-2], 1),
-        #pad_nan(data_obj.open[:-2], 1),
-        #pad_nan(data_obj.high[:-2], 1),
-        #pad_nan(data_obj.low[:-2], 1),
-        #pad_nan(data_obj.close[:-3], 2),
-        #pad_nan(data_obj.open[:-3], 2),
-        #pad_nan(data_obj.high[:-3], 2),
-        #pad_nan(data_obj.low[:-3], 2),
+        # data_obj.high[:-1],
+        # data_obj.low[:-1],
+        # pad_nan(data_obj.close[:-2], 1),
+        # pad_nan(data_obj.open[:-2], 1),
+        # pad_nan(data_obj.high[:-2], 1),
+        # pad_nan(data_obj.low[:-2], 1),
+        # pad_nan(data_obj.close[:-3], 2),
+        # pad_nan(data_obj.open[:-3], 2),
+        # pad_nan(data_obj.high[:-3], 2),
+        # pad_nan(data_obj.low[:-3], 2),
         data_obj.google_trend_score[:-1].T,
         data_obj.web_sentiment_score[:-1],
         data_obj.hash_rates[:-1]
@@ -442,29 +422,29 @@ def kalman_filter(input_price):
     n_iter = len(input_price)
     vector_size = (n_iter,)
 
-    Q = 1E-5
+    q = 1E-5
 
     post_estimate = np.zeros(vector_size)
-    P = np.zeros(vector_size)
+    p = np.zeros(vector_size)
     post_estimate_minus = np.zeros(vector_size)
-    Pminus = np.zeros(vector_size)
-    K = np.zeros(vector_size)
+    pminus = np.zeros(vector_size)
+    k_var = np.zeros(vector_size)
 
-    R = 0.1 ** 2
+    r = 0.1 ** 2
 
     post_estimate[0] = input_price[0]
-    P[0] = 1.0
+    p[0] = 1.0
 
     for k in range(1, n_iter):
         post_estimate_minus[k] = post_estimate[k - 1]
-        Pminus[k] = P[k - 1] + Q
+        pminus[k] = p[k - 1] + q
 
-        K[k] = Pminus[k] / (Pminus[k] + R)
-        post_estimate[k] = post_estimate_minus[k] + K[k] * (input_price[k] - post_estimate_minus[k])
-        P[k] = (1 - K[k]) * Pminus[k]
+        k_var[k] = pminus[k] / (pminus[k] + r)
+        post_estimate[k] = post_estimate_minus[k] + k_var[k] * (input_price[k] - post_estimate_minus[k])
+        p[k] = (1 - k_var[k]) * pminus[k]
 
     return post_estimate
 
 
-def sort_arrays_by_first(Y, X):
-    return [x for (y, x) in sorted(zip(Y, X))], [y for (y, x) in sorted(zip(Y, X))]
+def sort_arrays_by_first(y_input, x_input):
+    return [x for (y, x) in sorted(zip(y_input, x_input))], [y for (y, x) in sorted(zip(y_input, x_input))]
