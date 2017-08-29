@@ -27,7 +27,7 @@ The script settings are controlled by the strategy dictionary variable, for each
 
 ## Input Data
 Minor changes were made to the Poloniex API python wrapper which is included in the repository https://github.com/s4w3d0ff/python-poloniex. Data is retrieved via the Poloniex API in OHLC (open, high, low, close) candlestick format along with volume data.
-A series of non-price data are also provided, hash rates, google trends data are pulled using the pytrends pseudo API and the web scraping and reddit and bitcointalk forum data is supplied using the natural language processing sentiment analysis package from here https://github.com/llens/CryptocurrencyWebScrapingAndSentimentAnalysis. 
+A series of non-price data are also provided, hash rates, google trends data are pulled using the pytrends pseudo API and the web scraping and Reddit and bitcointalk forum data is supplied using the natural language processing sentiment analysis package from here https://github.com/llens/CryptocurrencyWebScrapingAndSentimentAnalysis. 
 
 Alternatively, price and volume data can be supplied in the form of .csv files by including them in the working directory, setting web_flag as false and supplying the filenames as filename1 and filename2, (filename1 will be the currency pair used for trading).
 
@@ -44,7 +44,7 @@ An ideal trading strategy is generated based on past data, every candlestick is 
 A buy threshold and sell threshold are selected which maximise profit based on the score returned for the training data, where a sell or buy signal is generated if the respective threshold is crossed.
 
 ## Machine Learning Meta-fitting and Hyper Parameter Optimisation
-The machine learning optimisation is based on a two layer random search, as outlined in the diagram below. The meta-fitting selects a machine learning and preprocessing pair, the selected machine learning model is then optimised using a second random grid search to fit the hyperparameters for that particular machine learning model. One option (solid box) is selected for each options (inner dashed box) for each fitting. (Without GPU support the tensorflow fitting may take a long time!)
+The machine learning optimisation is based on a two layer random search, as outlined in the diagram below. The meta-fitting selects a machine learning and preprocessing pair, the selected machine learning model is then optimised using a second random grid search to fit the hyperparameters for that particular machine learning model. One option (solid box) is selected for each parameter (inner dashed box) for each fitting stage (outer dashed box). (Without GPU support the tensorflow fitting may take a long time!)
 ![Alt text](ML_Flowchart.png?raw=true "Optional Title")
 
 ## Example results
