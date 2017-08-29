@@ -2,8 +2,28 @@
 A machine learning program in python to generate cryptocurrency trading strategies using machine and deep learning on price, hash rates, google trends and scraped forum sentiment data (using natural language processing). Based on Sklearn and Tensorflow.
 The script is inspired by both the pytrader project https://github.com/owocki/pytrader, and the auto-sklearn project https://automl.github.io/auto-sklearn/stable/. 
 
-# Disclaimer
+## Disclaimer
 The information in this repository is provided for information purposes only. The Information is not intended to be and does not constitute financial advice or any other advice, is general in nature and not specific to you.
+
+## Settings
+The script settings are controlled by the strategy dictionary variable, for each fitting you need to supply:  
+'trading_currencies' - the cryptocurrencies for the trader to trade between;  
+'ticker_#' - the poloniex tickers to pull data from;  
+'scraper_currency_#' - the currency with which to scrape forums for sentiment analysis;  
+'candle_size' - the candlestick chart candle size to use for input data;  
+'n_days' - total number of days of data to use as input;  
+'offset' - offset from end of data to pull data from;  
+'bid_ask_spread' - trading currency bid-ask spread;  
+'transaction_fee' - transaction fee per trade;  
+'train_test_validation_ratios' - fraction of data to use for training, testing and validation;  
+'output_flag' - supply text output for every machine learning model that is fit;  
+'plot_flag' - supply graphical output for every machine learnign model that is fit;  
+'ml_iterations' - number of random search iterations for hyperparameter fitting;  
+'target_score' - select scoring system to generate targets for fitting;  
+''windows' - windows to fit exponential moving averages over;  
+'web_flag' - pull price data from web of csv;  
+'filename_#' - file to use for candlestick csv if required;  
+'scraper_page_limit' - number of web pages to scrape per currency per web source;  
 
 ## Input Data
 Minor changes were made to the Poloniex API python wrapper which is included in the repository https://github.com/s4w3d0ff/python-poloniex. Data is retrieved via the Poloniex API in OHLC (open, high, low, close) candlestick format along with volume data.
@@ -24,7 +44,7 @@ An ideal trading strategy is generated based on past data, every candlestick is 
 A buy threshold and sell threshold are selected which maximise profit based on the score returned for the training data, where a sell or buy signal is generated if the respective threshold is crossed.
 
 ## Machine Learning Meta-fitting and Hyper Parameter Optimisation
-The machine learning optimisation is based on a two layer random search, as outlined in the diagram below. The meta-fitting selects a machine learning and preprocessing pair, the selected machine learning model is then optimised using a second random grid search to fit the hyperparameters for that particular machine learning model. (Without GPU support the tensorflow fitting may take a long time!)
+The machine learning optimisation is based on a two layer random search, as outlined in the diagram below. The meta-fitting selects a machine learning and preprocessing pair, the selected machine learning model is then optimised using a second random grid search to fit the hyperparameters for that particular machine learning model. One option (solid box) is selected for each options (inner dashed box) for each fitting. (Without GPU support the tensorflow fitting may take a long time!)
 ![Alt text](ML_Flowchart.png?raw=true "Optional Title")
 
 ## Example results
