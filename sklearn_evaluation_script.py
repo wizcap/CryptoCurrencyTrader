@@ -9,9 +9,9 @@ from strategy_evaluation import output_strategy_results
 def random_search(strategy_dictionary_local, n_iterations):
     toc = tic()
 
-    data_local, data_2 = import_data(strategy_dictionary)
+    data_local, data_2 = import_data(strategy_dictionary_local)
     fitting_inputs_local, continuous_targets, classification_targets = input_processing(
-        data_local, data_2, strategy_dictionary)
+        data_local, data_2, strategy_dictionary_local)
 
     counter = 0
     error = 1e5
@@ -27,7 +27,7 @@ def random_search(strategy_dictionary_local, n_iterations):
         elif strategy_dictionary['regression_mode'] == 'regression':
             fitting_targets_local = continuous_targets
 
-        fitting_inputs_local = preprocessing_inputs(strategy_dictionary, fitting_inputs_local)
+        fitting_inputs_local, strategy_dictionary = preprocessing_inputs(strategy_dictionary, fitting_inputs_local)
 
         fitting_dictionary, profit_factor = fit_strategy(
             strategy_dictionary, data_local, fitting_inputs_local, fitting_targets_local)
@@ -46,7 +46,6 @@ def random_search(strategy_dictionary_local, n_iterations):
 
 def randomise_dictionary_inputs(strategy_dictionary_local):
     strategy_dictionary_local['ml_mode'] = choice(['adaboost', 'randomforest', 'gradientboosting', 'extratreesfitting'])
-    # 'svm'
     strategy_dictionary_local['regression_mode'] = choice(['regression', 'classification'])
     strategy_dictionary_local['preprocessing'] = choice(['PCA', 'FastICA', 'None'])
     return strategy_dictionary_local

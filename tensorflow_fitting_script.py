@@ -33,7 +33,8 @@ def random_search(strategy_dictionary_local, n_iterations):
         elif strategy_dictionary_local['regression_mode'] == 'regression':
             fitting_targets_local = continuous_targets
 
-        fitting_inputs_local = preprocessing_inputs(strategy_dictionary_local, fitting_inputs_local)
+        fitting_inputs_local, strategy_dictionary_local = preprocessing_inputs(
+            strategy_dictionary_local, fitting_inputs_local)
 
         fitting_dictionary, error_loop, profit_factor = fit_tensorflow(strategy_dictionary_local, data_local,
                                                                        fitting_inputs_local, fitting_targets_local)

@@ -369,9 +369,9 @@ def preprocessing_inputs(strategy_dictionary, fitting_inputs_scaled):
         fitting_inputs_scaled = pca_transform(fitting_inputs_scaled)
 
     if strategy_dictionary['preprocessing'] == 'FastICA':
-        fitting_inputs_scaled = fast_ica_transform(fitting_inputs_scaled)
+        fitting_inputs_scaled, strategy_dictionary = fast_ica_transform(fitting_inputs_scaled)
 
-    return fitting_inputs_scaled
+    return fitting_inputs_scaled, strategy_dictionary
 
 
 def pad_nan(vector, n):
@@ -392,11 +392,15 @@ def pca_transform(fitting_inputs_scaled):
     return pca.transform(fitting_inputs_scaled)
 
 
-def fast_ica_transform(fitting_inputs_scaled):
-    ica = FastICA()
-    ica.fit(fitting_inputs_scaled)
+def fast_ica_transform(strategy_dictionary, fitting_inputs_scaled):
 
-    return ica.transform(fitting_inputs_scaled)
+    try:
+        ica = FastICA()
+        ica.fit(fitting_inputs_scaled)
+    except:
+        strategy_dictionary['preprocessing'] = 'None'
+
+    return ica.transform(fitting_inputs_scaled), strategy_dictionary
 
 
 def train_test_indices(input_data, train_factor):
