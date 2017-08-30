@@ -6,8 +6,8 @@ from sklearn.decomposition import PCA, FastICA
 from poloniex_API import poloniex
 from API_settings import poloniex_API_secret, poloniex_API_key
 from non_price_data import google_trends_interest_over_time, initialise_google_session, hash_rate
-from vendor.web_scraper import scrape_subreddits, scrape_forums
-from vendor.sentiment_analysis import analyse_sentiments
+from CryptocurrencyWebScrapingAndSentimentAnalysis.web_scraper import scrape_subreddits, scrape_forums
+from CryptocurrencyWebScrapingAndSentimentAnalysis.sentiment_analysis import analyse_sentiments
 SEC_IN_DAY = 86400
 
 SYMBOL_DICTIONARY = {
@@ -397,10 +397,12 @@ def fast_ica_transform(strategy_dictionary, fitting_inputs_scaled):
     try:
         ica = FastICA()
         ica.fit(fitting_inputs_scaled)
+
+        fitting_inputs_scaled = ica.transform(fitting_inputs_scaled)
     except:
         strategy_dictionary['preprocessing'] = 'None'
 
-    return ica.transform(fitting_inputs_scaled), strategy_dictionary
+    return , strategy_dictionary
 
 
 def train_test_indices(input_data, train_factor):
