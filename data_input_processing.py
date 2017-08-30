@@ -369,7 +369,7 @@ def preprocessing_inputs(strategy_dictionary, fitting_inputs_scaled):
         fitting_inputs_scaled = pca_transform(fitting_inputs_scaled)
 
     if strategy_dictionary['preprocessing'] == 'FastICA':
-        fitting_inputs_scaled, strategy_dictionary = fast_ica_transform(fitting_inputs_scaled)
+        fitting_inputs_scaled, strategy_dictionary = fast_ica_transform(strategy_dictionary, fitting_inputs_scaled)
 
     return fitting_inputs_scaled, strategy_dictionary
 
