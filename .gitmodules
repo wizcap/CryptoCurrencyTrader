@@ -1,0 +1,4 @@
+[submodule "CryptocurrencyWebScrapingAndSentimentAnalysis"]
+	path = CryptocurrencyWebScrapingAndSentimentAnalysis
+	url = https://github.com/llens/CryptocurrencyWebScrapingAndSentimentAnalysis.git
+	branch = master
