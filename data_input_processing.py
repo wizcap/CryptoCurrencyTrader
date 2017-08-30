@@ -402,7 +402,7 @@ def fast_ica_transform(strategy_dictionary, fitting_inputs_scaled):
     except:
         strategy_dictionary['preprocessing'] = 'None'
 
-    return , strategy_dictionary
+    return fitting_inputs_scaled, strategy_dictionary
 
 
 def train_test_indices(input_data, train_factor):
