@@ -58,7 +58,7 @@ In order to estimate the amount of overfitting, a series of offset hyperparamete
 With none of the different automated machine learning optimisation strategies was I able to get a set of fitting parameters which was consistently profitable at multiple offsets.
 * Add none price data.
 
-#Setup
+# Setup
 To run as a standalone script add a file named API_settings.py containing your poloniex API, google and reddit API login:
 poloniex_API_key = ""  
 poloniex_API_secret = ""  
