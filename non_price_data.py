@@ -7,7 +7,7 @@ from API_settings import google_username, google_password
 
 
 def initialise_google_session():
-    return TrendReq(google_username, google_password, custom_useragent='My Pytrends Script')
+    return TrendReq()#google_username, google_password, custom_useragent='My Pytrends Script')
 
 
 def google_trends_interest_over_time(pytrend_local, search_terms):

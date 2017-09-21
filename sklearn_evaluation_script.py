@@ -22,12 +22,13 @@ def random_search(strategy_dictionary_local, n_iterations):
         counter += 1
         strategy_dictionary_local = randomise_dictionary_inputs(strategy_dictionary_local)
 
-        if strategy_dictionary['regression_mode'] == 'classification':
+        if strategy_dictionary_local['regression_mode'] == 'classification':
             fitting_targets_local = classification_targets
-        elif strategy_dictionary['regression_mode'] == 'regression':
+        elif strategy_dictionary_local['regression_mode'] == 'regression':
             fitting_targets_local = continuous_targets
 
-        fitting_inputs_local, strategy_dictionary = preprocessing_inputs(strategy_dictionary, fitting_inputs_local)
+        fitting_inputs_local, strategy_dictionary = preprocessing_inputs(strategy_dictionary_local,
+                                                                         fitting_inputs_local)
 
         fitting_dictionary, profit_factor = fit_strategy(
             strategy_dictionary, data_local, fitting_inputs_local, fitting_targets_local)
@@ -59,23 +60,23 @@ if __name__ == '__main__':
         'scraper_currency_1': 'BTC',
         'scraper_currency_2': 'ETH',
         'candle_size': 1800,
-        'n_days': 180,
+        'n_days': 160,
         'offset': 0,
         'bid_ask_spread': 0.004,
         'transaction_fee': 0.0025,
         'train_test_validation_ratios': [0.5, 0.25, 0.25],
         'output_flag': True,
         'plot_flag': False,
-        'ml_iterations': 50,
+        'ml_iterations': 5,
         'target_score': 'idealstrategy',
         'windows': [10, 50, 100],
         'web_flag': True,
         'filename1': "USDT_BTC.csv",
         'filename2': "BTC_ETH.csv",
-        'scraper_page_limit': 50,
+        'scraper_page_limit': 5,
     }
 
-    search_iterations = 50
+    search_iterations = 5
 
     strategy_dictionary, fitting_inputs, fitting_targets, data_to_predict = random_search(
         strategy_dictionary, search_iterations)
