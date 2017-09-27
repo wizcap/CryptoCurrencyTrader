@@ -162,7 +162,7 @@ def fit_tensorflow(strategy_dictionary, data_to_predict, fitting_inputs, fitting
 
     if strategy_dictionary['sequence_flag']:
         fitting_dictionary, error = tensorflow_sequence_fitting(
-            '/home/thomas/test', train_indices, test_indices, validation_indices, fitting_inputs, fitting_targets,
+            '/tmp/test', train_indices, test_indices, validation_indices, fitting_inputs, fitting_targets,
             strategy_dictionary)
 
     else:
