@@ -236,6 +236,7 @@ def fit_tensorflow(strategy_dictionary, data_to_predict, fitting_inputs, fitting
             fitting_inputs,
             fitting_targets)
 
+
     else:
         fitting_dictionary, error = tensorflow_fitting(
             train_indices,
