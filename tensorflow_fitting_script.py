@@ -20,8 +20,6 @@ def random_search(strategy_dictionary_local, n_iterations):
     while counter < n_iterations:
         counter += 1
 
-        strategy_dictionary['sequence_flag'] = np.random.choice([True, False])
-
         if strategy_dictionary['sequence_flag']:
             strategy_dictionary_local = randomise_sequence_dictionary_inputs(strategy_dictionary_local)
         else:
@@ -36,8 +34,11 @@ def random_search(strategy_dictionary_local, n_iterations):
         fitting_inputs_local, strategy_dictionary_local = preprocessing_inputs(
             strategy_dictionary_local, fitting_inputs_local)
 
-        fitting_dictionary, error_loop, profit_factor = fit_tensorflow(strategy_dictionary_local, data_local,
-                                                                       fitting_inputs_local, fitting_targets_local)
+        fitting_dictionary, error_loop, profit_factor = fit_tensorflow(
+            strategy_dictionary_local,
+            data_local,
+            fitting_inputs_local,
+            fitting_targets_local)
 
         if error_loop < error:
             error = error_loop
@@ -70,7 +71,7 @@ if __name__ == '__main__':
         'ticker_2': 'BTC_ETH',
         'scraper_currency_1': 'BTC',
         'scraper_currency_2': 'ETH',
-        'candle_size': 1800,
+        'candle_size': 300,
         'n_days': 40,
         'offset': 0,
         'bid_ask_spread': 0.004,
@@ -83,7 +84,7 @@ if __name__ == '__main__':
         'regression_mode': 'regression',
         'preprocessing': 'None',
         'ml_mode': 'tensorflow',
-        'sequence_flag': False,
+        'sequence_flag': True,
         'output_units': 1,
         'web_flag': True,
         'filename1': "USDT_BTC.csv",

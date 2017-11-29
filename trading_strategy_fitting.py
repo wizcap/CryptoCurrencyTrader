@@ -4,48 +4,100 @@ from data_input_processing import Data, train_test_validation_indices, generate_
 from strategy_evaluation import post_process_training_results, output_strategy_results
 from machine_learning import random_forest_fitting, svm_fitting, adaboost_fitting, gradient_boosting_fitting,\
     extra_trees_fitting, tensorflow_fitting, tensorflow_sequence_fitting
+from sklearn.preprocessing import StandardScaler
 
 SEC_IN_DAY = 86400
 
 
 def meta_fitting(fitting_inputs, fitting_targets, strategy_dictionary):
     error = []
-    fitting_dictionary = {}
+    model = []
     train_indices, test_indices, validation_indices = train_test_validation_indices(
-        fitting_inputs, strategy_dictionary['train_test_validation_ratios'])
+        fitting_inputs,
+        strategy_dictionary['train_test_validation_ratios'])
+
+    target_scaler = StandardScaler()
+
+    if strategy_dictionary['regression_mode'] == 'regression':
+        fitting_targets = target_scaler.fit_transform(fitting_targets.reshape(-1, 1)).ravel()
+
     if strategy_dictionary['ml_mode'] == 'svm':
-        fitting_dictionary, error = svm_fitting(
-            fitting_inputs, fitting_targets, train_indices, test_indices, validation_indices, strategy_dictionary)
+        model, error = svm_fitting(
+            fitting_inputs,
+            fitting_targets,
+            train_indices,
+            strategy_dictionary)
 
     elif strategy_dictionary['ml_mode'] == 'randomforest':
-        fitting_dictionary, error = random_forest_fitting(
-            fitting_inputs, fitting_targets, train_indices, test_indices, validation_indices, strategy_dictionary)
+        model, error = random_forest_fitting(
+            fitting_inputs,
+            fitting_targets,
+            train_indices,
+            strategy_dictionary)
 
     elif strategy_dictionary['ml_mode'] == 'adaboost':
-        fitting_dictionary, error = adaboost_fitting(
-            fitting_inputs, fitting_targets, train_indices, test_indices, validation_indices, strategy_dictionary)
+        model, error = adaboost_fitting(
+            fitting_inputs,
+            fitting_targets,
+            train_indices,
+            strategy_dictionary)
 
     elif strategy_dictionary['ml_mode'] == 'gradientboosting':
-        fitting_dictionary, error = gradient_boosting_fitting(
-            fitting_inputs, fitting_targets, train_indices, test_indices, validation_indices, strategy_dictionary)
+        model, error = gradient_boosting_fitting(
+            fitting_inputs,
+            fitting_targets,
+            train_indices,
+            strategy_dictionary)
 
     elif strategy_dictionary['ml_mode'] == 'extratreesfitting':
-        fitting_dictionary, error = extra_trees_fitting(
-            fitting_inputs, fitting_targets, train_indices, test_indices, validation_indices, strategy_dictionary)
+        model, error = extra_trees_fitting(
+            fitting_inputs,
+            fitting_targets,
+            train_indices,
+            strategy_dictionary)
 
-    fitting_dictionary['train_indices'] = train_indices
-    fitting_dictionary['test_indices'] = test_indices
-    fitting_dictionary['validation_indices'] = validation_indices
-    fitting_dictionary['error'] = error
+    if len(test_indices) != 0:
+        training_strategy_score = model.predict(fitting_inputs[train_indices, :])
+        fitted_strategy_score = model.predict(fitting_inputs[test_indices, :])
+        validation_strategy_score = model.predict(fitting_inputs[validation_indices, :])
+
+    else:
+        fitted_strategy_score = []
+        validation_strategy_score = []
+
+    if strategy_dictionary['regression_mode'] == 'regression':
+        fitting_dictionary = {
+            'training_strategy_score': target_scaler.inverse_transform(training_strategy_score),
+            'fitted_strategy_score': target_scaler.inverse_transform(fitted_strategy_score),
+            'validation_strategy_score': target_scaler.inverse_transform(validation_strategy_score),
+            'train_indices': train_indices,
+            'test_indices': test_indices,
+            'validation_indices': validation_indices,
+            'error': error}
+
+    elif strategy_dictionary['regression_mode'] == 'classification':
+        fitting_dictionary = {
+            'training_strategy_score': training_strategy_score,
+            'fitted_strategy_score': fitted_strategy_score,
+            'validation_strategy_score': validation_strategy_score,
+            'train_indices': train_indices,
+            'test_indices': test_indices,
+            'validation_indices': validation_indices,
+            'error': error}
 
     return fitting_dictionary
 
 
 def input_processing(data_to_predict_local, data_input_2, strategy_dictionary):
     fitting_inputs, continuous_targets, classification_targets = generate_training_variables(
-        data_to_predict_local, strategy_dictionary)
+        data_to_predict_local,
+        strategy_dictionary)
+
     fitting_inputs_2, fitting_targets_2, classification_targets_2 = generate_training_variables(
-        data_input_2, strategy_dictionary, prior_data_obj=data_to_predict_local)
+        data_input_2,
+        strategy_dictionary,
+        prior_data_obj=data_to_predict_local)
+
     fitting_inputs, fitting_inputs_2 = trim_inputs(fitting_inputs, fitting_inputs_2)
     fitting_inputs = np.hstack((fitting_inputs, fitting_inputs_2))
 
@@ -78,14 +130,23 @@ def retrieve_data(ticker, scraper_currency, strategy_dictionary, filename):
                 start = end - SEC_IN_DAY * strategy_dictionary['n_days']
 
                 data_local = Data(
-                    ticker, scraper_currency, strategy_dictionary['candle_size'], strategy_dictionary['web_flag'],
-                    start=start, end=end,
+                    ticker,
+                    scraper_currency,
+                    strategy_dictionary['candle_size'],
+                    strategy_dictionary['web_flag'],
+                    start=start,
+                    end=end,
                 )
+
             else:
                 data_local = Data(
-                    ticker, scraper_currency, strategy_dictionary['candle_size'], strategy_dictionary['web_flag'],
-                    offset=strategy_dictionary['offset'], filename=filename,
+                    ticker, scraper_currency,
+                    strategy_dictionary['candle_size'],
+                    strategy_dictionary['web_flag'],
+                    offset=strategy_dictionary['offset'],
+                    filename=filename,
                     n_days=strategy_dictionary['n_days'])
+
         except Exception:
             pass
 
@@ -133,11 +194,18 @@ def tensorflow_offset_scan_validation(strategy_dictionary, data_to_predict, fitt
 
 
 def import_data(strategy_dictionary):
+
     data_to_predict = retrieve_data(
-        strategy_dictionary['ticker_1'], strategy_dictionary['scraper_currency_1'], strategy_dictionary,
+        strategy_dictionary['ticker_1'],
+        strategy_dictionary['scraper_currency_1'],
+        strategy_dictionary,
         strategy_dictionary['filename1'])
-    data_2 = retrieve_data(strategy_dictionary['ticker_2'], strategy_dictionary['scraper_currency_2'],
-                           strategy_dictionary, strategy_dictionary['filename2'])
+
+    data_2 = retrieve_data(
+        strategy_dictionary['ticker_2'],
+        strategy_dictionary['scraper_currency_2'],
+        strategy_dictionary,
+        strategy_dictionary['filename2'])
 
     return data_to_predict, data_2
 
@@ -162,12 +230,19 @@ def fit_tensorflow(strategy_dictionary, data_to_predict, fitting_inputs, fitting
 
     if strategy_dictionary['sequence_flag']:
         fitting_dictionary, error = tensorflow_sequence_fitting(
-            '/home/thomas/test', train_indices, test_indices, validation_indices, fitting_inputs, fitting_targets,
-            strategy_dictionary)
+            train_indices,
+            test_indices,
+            validation_indices,
+            fitting_inputs,
+            fitting_targets)
 
     else:
-        fitting_dictionary, error = tensorflow_fitting(train_indices, test_indices, validation_indices, fitting_inputs,
-                                                       fitting_targets)
+        fitting_dictionary, error = tensorflow_fitting(
+            train_indices,
+            test_indices,
+            validation_indices,
+            fitting_inputs,
+            fitting_targets)
 
     fitting_dictionary['train_indices'] = train_indices
     fitting_dictionary['test_indices'] = test_indices

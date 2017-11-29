@@ -55,6 +55,7 @@ class Data:
         self.scraper_score_dates = []
         self.scraper_score_texts = []
         self.classification_score = []
+        self.momentum = []
 
         if web_flag:
             self.candle_input_web(currency_pair, start, end, period)
@@ -135,34 +136,24 @@ class Data:
     def calculate_fractional_volume(self):
         self.fractional_volume = fractional_change(self.volume)
 
-    def calculate_indicators(self, strategy_dictionary, prior_data_obj=None):
-        self.calculate_fractional_volatility()
-        self.calculate_fractional_volume()
+    def calculate_indicators(self, strategy_dictionary, prior_data_obj=None, non_price_data=False):
 
-        self.exponential_moving_average_1 = exponential_moving_average(self.fractional_close[:-1],
-                                                                       strategy_dictionary['windows'][0])
-        self.exponential_moving_average_2 = exponential_moving_average(self.fractional_close[:-1],
-                                                                       strategy_dictionary['windows'][1])
-        self.exponential_moving_average_3 = exponential_moving_average(self.fractional_close[:-1],
-                                                                       strategy_dictionary['windows'][2])
+        self.exponential_moving_average_1 = exponential_moving_average(
+            self.fractional_close[:-1],
+            strategy_dictionary['windows'][0])
 
-        self.exponential_moving_volatility_1 = exponential_moving_average(self.fractional_volatility[:-1],
-                                                                          strategy_dictionary['windows'][0])
-        self.exponential_moving_volatility_2 = exponential_moving_average(self.fractional_volatility[:-1],
-                                                                          strategy_dictionary['windows'][1])
-        self.exponential_moving_volatility_3 = exponential_moving_average(self.fractional_volatility[:-1],
-                                                                          strategy_dictionary['windows'][2])
+        self.exponential_moving_average_2 = exponential_moving_average(
+            self.fractional_close[:-1],
+            3 * strategy_dictionary['windows'][0])
 
-        self.exponential_moving_volume_1 = exponential_moving_average(self.fractional_volume[:-1],
-                                                                      strategy_dictionary['windows'][0])
-        self.exponential_moving_volume_2 = exponential_moving_average(self.fractional_volume[:-1],
-                                                                      strategy_dictionary['windows'][1])
-        self.exponential_moving_volume_3 = exponential_moving_average(self.fractional_volume[:-1],
-                                                                      strategy_dictionary['windows'][2])
+        self.momentum = self.exponential_moving_average_1 - self.exponential_moving_average_2
 
-        self.kalman_signal = kalman_filter(self.close[:-2])
+        self.exponential_moving_volatility_1 = exponential_moving_average(
+            self.momentum ** 2,
+            3 * strategy_dictionary['windows'][0])
 
-        self.non_price_data(strategy_dictionary, prior_data_obj=prior_data_obj)
+        if non_price_data:
+            self.non_price_data(strategy_dictionary, prior_data_obj=prior_data_obj)
 
     def non_price_data(self, strategy_dictionary, prior_data_obj=None):
         self.hash_rate_data()
@@ -271,6 +262,7 @@ class TradingTargets:
         self.classification_score = np.zeros(len(self.strategy_score))
         self.classification_score[self.strategy_score > 1] = 1
         self.classification_score[self.strategy_score < 1] = -1
+        self.classification_score = self.classification_score.astype(int)
 
 
 def effective_fee(strategy_dictionary):
@@ -327,18 +319,11 @@ def generate_training_variables(data_obj, strategy_dictionary, prior_data_obj=No
     data_obj.calculate_indicators(strategy_dictionary, prior_data_obj=prior_data_obj)
 
     fitting_inputs = np.vstack((
-        data_obj.exponential_moving_average_1,
-        data_obj.exponential_moving_average_2,
-        data_obj.exponential_moving_average_3,
+        data_obj.momentum,
         data_obj.exponential_moving_volatility_1,
-        data_obj.exponential_moving_volatility_2,
-        data_obj.exponential_moving_volatility_3,
-        data_obj.exponential_moving_volume_1,
-        data_obj.exponential_moving_volume_2,
-        data_obj.exponential_moving_volume_3,
-        data_obj.kalman_signal,
+        #data_obj.kalman_signal,
         # data_obj.close[:-1],
-        data_obj.open[:-2],
+        #data_obj.open[:-2],
         # data_obj.high[:-1],
         # data_obj.low[:-1],
         # pad_nan(data_obj.close[:-2], 1),
@@ -349,9 +334,9 @@ def generate_training_variables(data_obj, strategy_dictionary, prior_data_obj=No
         # pad_nan(data_obj.open[:-3], 2),
         # pad_nan(data_obj.high[:-3], 2),
         # pad_nan(data_obj.low[:-3], 2),
-        data_obj.google_trend_score[:-1].T,
-        data_obj.web_sentiment_score[:-1],
-        data_obj.hash_rates[:-1]
+        #data_obj.google_trend_score[:-1].T,
+        #data_obj.web_sentiment_score[:-1],
+        #data_obj.hash_rates[:-1]
         ))
 
     fitting_inputs = fitting_inputs.T
@@ -419,6 +404,7 @@ def train_test_validation_indices(input_data, ratios):
     data_length = len(input_data)
     train_indices_local = range(0, int(data_length * train_factor))
     test_indices_local = range(train_indices_local[-1] + 1, int(data_length * (train_factor + test_factor)))
+
     validation_indices_local = range(test_indices_local[-1] + 1, data_length)
 
     return train_indices_local, test_indices_local, validation_indices_local

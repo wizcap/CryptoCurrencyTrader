@@ -1,116 +1,351 @@
 from sklearn.svm import SVR, SVC
-from sklearn.model_selection import RandomizedSearchCV
 from sklearn.ensemble import RandomForestClassifier, RandomForestRegressor, AdaBoostClassifier, AdaBoostRegressor, \
     GradientBoostingClassifier, GradientBoostingRegressor, ExtraTreesClassifier, ExtraTreesRegressor
 from sklearn.metrics import mean_squared_error
-from tensorflow.contrib import learn
-from tensorflow.python.estimator.inputs.inputs import numpy_input_fn
-import polyaxon as plx
-import tensorflow as tf
+from sklearn.preprocessing import StandardScaler
+from keras.layers import Conv1D, Dense, Dropout, MaxPooling1D, LSTM, Input
+from keras.models import Model, Sequential
+from bayes_opt import BayesianOptimization
 import numpy as np
-from shutil import rmtree
-from os.path import exists
-from scipy import stats
 
 
-def svm_fitting(input_data, target_data, train_indices, test_indices, validation_indices, strategy_dictionary):
-    param_set = {'kernel': ['rbf'],
-                 'C': stats.expon(scale=0.01),
-                 'gamma': stats.expon(scale=0.01)}
+def svm_fitting(input_data, target_data, train_indices, strategy_dictionary):
 
-    clf = []
+    """ find optimum hyperparameters for svm"""
+
+    param_set = {'C': (0.001, 100), 'gamma': (0.0001, 0.1)}
+
     if strategy_dictionary['regression_mode'] == 'regression':
-        clf = SVR()
-    elif strategy_dictionary['regression_mode'] == 'classification':
-        clf = SVC()
+        bo = BayesianOptimization(
+            lambda C, gamma:
+            bayesian_wrapper(
+                SVR(C=C, gamma=gamma, kernel='rbf'),
+                train_indices,
+                input_data,
+                target_data),
+            param_set)
 
-    return random_search(clf, param_set, train_indices, test_indices, validation_indices, input_data, target_data)
+    elif strategy_dictionary['regression_mode'] == 'classification':
+
+        bo = BayesianOptimization(
+            lambda C, gamma:
+            bayesian_wrapper(
+                SVC(C=C, gamma=gamma, kernel='rbf'),
+                train_indices,
+                input_data,
+                target_data),
+            param_set)
+
+    bo.maximize(n_iter=strategy_dictionary['ml_iterations'])
+
+    result_dict = bo.res['max']
+
+    error = 1 / result_dict['max_val']
+
+    if strategy_dictionary['regression_mode'] == 'regression':
+        model = SVR(C=result_dict['max_params']['C'], gamma=result_dict['max_params']['gamma'], kernel='rbf')
+
+    elif strategy_dictionary['regression_mode'] == 'classification':
+        model = SVC(C=result_dict['max_params']['C'], gamma=result_dict['max_params']['gamma'], kernel='rbf')
+
+    model.fit(input_data[train_indices, :], target_data[train_indices])
+
+    return model, error
+
+
+def bayesian_wrapper(clf, train_indices, input_data, target_data):
+
+    """ wrapper for bayesian optimization """
+
+    clf.fit(input_data[train_indices, :], target_data[train_indices])
+
+    prediction = clf.predict(input_data[train_indices, :])
+
+    val = mean_squared_error(
+        target_data[train_indices],
+        prediction,
+    ).mean()
+
+    return 1 / val
 
 
 def random_forest_fitting(
-        input_data, target_data, train_indices, test_indices, validation_indices, strategy_dictionary):
-    clf = []
+        input_data,
+        target_data,
+        train_indices,
+        strategy_dictionary):
+
+    """ find optimum hyperparameters for random forest"""
+
+    param_set = {'n_estimators': (2, 1000),
+                 'max_depth': (1, 10),
+                 'max_features': (1, 3)}
+
     if strategy_dictionary['regression_mode'] == 'regression':
-        clf = RandomForestRegressor(n_jobs=-1)
+        bo = BayesianOptimization(
+            lambda n_estimators, max_depth, max_features:
+            bayesian_wrapper(
+                RandomForestRegressor(
+                    n_estimators=int(n_estimators),
+                    max_depth=int(max_depth),
+                    max_features=int(max_features)),
+                train_indices,
+                input_data,
+                target_data),
+            param_set)
+
     elif strategy_dictionary['regression_mode'] == 'classification':
-        clf = RandomForestClassifier(n_jobs=-1)
+        bo = BayesianOptimization(
+            lambda n_estimators, max_depth, max_features:
+            bayesian_wrapper(
+                RandomForestClassifier(
+                    n_estimators=int(n_estimators),
+                    max_depth=int(max_depth),
+                    max_features=int(max_features)),
+                train_indices,
+                input_data,
+                target_data),
+            param_set)
 
-    param_set = {'n_estimators': range(2, 1000),
-                 'max_depth': [1, 2, 3, None],
-                 'max_features': range(1, 5)}
+    bo.maximize(n_iter=strategy_dictionary['ml_iterations'])
 
-    return random_search(clf, param_set, train_indices, test_indices, validation_indices, input_data, target_data)
+    result_dict = bo.res['max']
 
+    error = 1 / result_dict['max_val']
 
-def adaboost_fitting(input_data, target_data, train_indices, test_indices, validation_indices, strategy_dictionary):
-    clf = []
     if strategy_dictionary['regression_mode'] == 'regression':
-        clf = AdaBoostRegressor()
+        model = RandomForestRegressor(
+            n_estimators=int(result_dict['max_params']['n_estimators']),
+            max_depth=int(result_dict['max_params']['max_depth']),
+            max_features=int(result_dict['max_params']['max_features']))
+
     elif strategy_dictionary['regression_mode'] == 'classification':
-        clf = AdaBoostClassifier()
+        model = RandomForestClassifier(
+            n_estimators=int(result_dict['max_params']['n_estimators']),
+            max_depth=int(result_dict['max_params']['max_depth']),
+            max_features=int(result_dict['max_params']['max_features']))
 
-    param_set = {'learning_rate': [0.1, 0.25, 0.5, 1.0],
-                 "n_estimators": range(2, 1000),
-                 }
+    model.fit(input_data[train_indices, :], target_data[train_indices])
 
-    return random_search(clf, param_set, train_indices, test_indices, validation_indices, input_data, target_data)
+    return model, error
+
+
+def adaboost_fitting(
+        input_data,
+        target_data,
+        train_indices,
+        strategy_dictionary):
+
+    """ find optimum hyperparameters for adaboost"""
+
+    param_set = {'learning_rate': (0.1, 1.0),
+                 "n_estimators": (2, 1000)}
+
+    if strategy_dictionary['regression_mode'] == 'regression':
+        bo = BayesianOptimization(
+            lambda n_estimators, learning_rate:
+            bayesian_wrapper(
+                AdaBoostRegressor(
+                    n_estimators=int(n_estimators),
+                    learning_rate=learning_rate),
+                train_indices,
+                input_data,
+                target_data),
+            param_set)
+
+    elif strategy_dictionary['regression_mode'] == 'classification':
+        bo = BayesianOptimization(
+            lambda n_estimators, learning_rate:
+            bayesian_wrapper(
+                AdaBoostClassifier(
+                    n_estimators=int(n_estimators),
+                    learning_rate=learning_rate),
+                train_indices,
+                input_data,
+                target_data),
+            param_set)
+
+    bo.maximize(n_iter=strategy_dictionary['ml_iterations'])
+
+    result_dict = bo.res['max']
+
+    error = 1 / result_dict['max_val']
+
+    if strategy_dictionary['regression_mode'] == 'regression':
+        model = AdaBoostRegressor(
+            n_estimators=int(result_dict['max_params']['n_estimators']),
+            learning_rate=result_dict['max_params']['learning_rate'])
+
+    elif strategy_dictionary['regression_mode'] == 'classification':
+        model = AdaBoostClassifier(
+            n_estimators=int(result_dict['max_params']['n_estimators']),
+            learning_rate=result_dict['max_params']['learning_rate'])
+
+    model.fit(input_data[train_indices, :], target_data[train_indices])
+
+    return model, error
 
 
 def gradient_boosting_fitting(
-        input_data, target_data, train_indices, test_indices, validation_indices, strategy_dictionary):
-    clf = []
+        input_data,
+        target_data,
+        train_indices,
+        strategy_dictionary):
+
+    """ find optimum hyperparameters for gradient boosting"""
+
+    param_set = {'n_estimators': (2, 1000),
+                 'max_depth': (1, 3),
+                 'learning_rate': (0.1, 1.0)}
+
     if strategy_dictionary['regression_mode'] == 'regression':
-        clf = GradientBoostingRegressor()
+        bo = BayesianOptimization(
+            lambda n_estimators, learning_rate, max_depth:
+            bayesian_wrapper(
+                GradientBoostingRegressor(
+                    n_estimators=int(n_estimators),
+                    learning_rate=learning_rate,
+                    max_depth=int(max_depth)),
+                train_indices,
+                input_data,
+                target_data),
+            param_set)
+
     elif strategy_dictionary['regression_mode'] == 'classification':
-        clf = GradientBoostingClassifier()
+        bo = BayesianOptimization(
+            lambda n_estimators, learning_rate, max_depth:
+            bayesian_wrapper(
+                GradientBoostingClassifier(
+                    n_estimators=int(n_estimators),
+                    learning_rate=learning_rate,
+                    max_depth = int(max_depth)),
+                train_indices,
+                input_data,
+                target_data),
+            param_set)
 
-    param_set = {'n_estimators': range(2, 1000),
-                 'max_depth': [1, 2, 3, None],
-                 'learning_rate': [0.1, 0.25, 0.5, 1.0],
-                 }
+    bo.maximize(n_iter=strategy_dictionary['ml_iterations'])
 
-    return random_search(clf, param_set, train_indices, test_indices, validation_indices, input_data, target_data)
+    result_dict = bo.res['max']
 
+    error = 1 / result_dict['max_val']
 
-def extra_trees_fitting(input_data, target_data, train_indices, test_indices, validation_indices, strategy_dictionary):
-    clf = []
     if strategy_dictionary['regression_mode'] == 'regression':
-        clf = ExtraTreesRegressor(n_jobs=-1)
+        model = GradientBoostingRegressor(
+            n_estimators=int(result_dict['max_params']['n_estimators']),
+            learning_rate=result_dict['max_params']['learning_rate'],
+            max_depth=int(result_dict['max_params']['max_depth']))
+
     elif strategy_dictionary['regression_mode'] == 'classification':
-        clf = ExtraTreesClassifier(n_jobs=-1)
+        model = GradientBoostingClassifier(
+            n_estimators=int(result_dict['max_params']['n_estimators']),
+            learning_rate=result_dict['max_params']['learning_rate'],
+            max_depth=int(result_dict['max_params']['max_depth']))
 
-    param_set = {'n_estimators': range(2, 1000),
-                 'max_depth': [1, 2, 3, None],
-                 }
+    model.fit(input_data[train_indices, :], target_data[train_indices])
 
-    return random_search(clf, param_set, train_indices, test_indices, validation_indices, input_data, target_data)
+    return model, error
+
+
+def extra_trees_fitting(
+        input_data,
+        target_data,
+        train_indices,
+        strategy_dictionary):
+
+    """ find optimum hyperparameters for extra trees"""
+
+    param_set = {'n_estimators': (2, 1000),
+                 'max_depth': (1, 10)}
+
+    if strategy_dictionary['regression_mode'] == 'regression':
+        bo = BayesianOptimization(
+            lambda n_estimators, max_depth:
+            bayesian_wrapper(
+                ExtraTreesRegressor(
+                    n_estimators=int(n_estimators),
+                    max_depth=int(max_depth),
+                    n_jobs=-1),
+                train_indices,
+                input_data,
+                target_data),
+            param_set)
+
+    elif strategy_dictionary['regression_mode'] == 'classification':
+        bo = BayesianOptimization(
+            lambda n_estimators, max_depth:
+            bayesian_wrapper(
+                ExtraTreesClassifier(
+                    n_estimators=int(n_estimators),
+                    max_depth = int(max_depth),
+                    n_jobs=-1),
+                train_indices,
+                input_data,
+                target_data),
+            param_set)
+
+    bo.maximize(n_iter=strategy_dictionary['ml_iterations'])
+
+    result_dict = bo.res['max']
+
+    error = 1 / result_dict['max_val']
+
+    if strategy_dictionary['regression_mode'] == 'regression':
+        model = GradientBoostingRegressor(
+            n_estimators=int(result_dict['max_params']['n_estimators']),
+            max_depth=int(result_dict['max_params']['max_depth']))
+
+    elif strategy_dictionary['regression_mode'] == 'classification':
+        model = GradientBoostingClassifier(
+            n_estimators=int(result_dict['max_params']['n_estimators']),
+            max_depth=int(result_dict['max_params']['max_depth']))
+
+    model.fit(input_data[train_indices, :], target_data[train_indices])
+
+    return model, error
 
 
 def tensorflow_fitting(train_indices, test_indices, validation_indices, input_data, target_data):
-    layers = 6
-    hidden_units = []
-    for i in range(layers):
-        hidden_units.append(2 ** (5 + layers - i))
+    target_scaler = StandardScaler()
+    target_data = target_scaler.fit_transform(target_data.reshape(-1, 1))
 
-    classifier = learn.DNNRegressor(
-        feature_columns=[tf.contrib.layers.real_valued_column("", dimension=input_data.shape[1])],
-        hidden_units=hidden_units)
+    input_data = input_data[:, :, None]
 
-    classifier.fit(input_fn=lambda: input_fn(input_data[train_indices], target_data[train_indices]), steps=2000)
+    train_data = input_data[train_indices, :, :]
+    train_target = target_data[train_indices, None]
 
-    training_strategy_score = list(classifier.predict(
-        input_fn=lambda: input_fn(input_data[train_indices], target_data[train_indices])))
-    fitted_strategy_score = list(classifier.predict(
-        input_fn=lambda: input_fn(input_data[test_indices], target_data[test_indices])))
-    validation_strategy_score = list(classifier.predict(
-        input_fn=lambda: input_fn(input_data[validation_indices], target_data[validation_indices])))
+    test_data = input_data[test_indices, :, :]
 
-    error = mean_squared_error(target_data[train_indices], training_strategy_score)
+    val_data = input_data[validation_indices, :, :]
+
+    input_size = input_data.shape
+
+    input1 = Input(shape=(input_size[1], input_size[2]))
+
+    dropout1 = Dropout(0.2)(input1)
+    dense1 = Dense(input_size[2], activation='tanh')(dropout1)
+    l_cov1 = Conv1D(input_size[2], 2, activation='tanh')(dense1)
+    dense2 = Dense(input_size[2], activation='tanh')(l_cov1)
+    preds = MaxPooling1D(2)(dense2)
+
+    model = Model(input1, preds)
+
+    model.compile(loss='mean_squared_error',
+                  optimizer='rmsprop')
+    model.summary()
+
+    model.fit(x=train_data, y=train_target)
+
+    training_strategy_score = model.predict(train_data)
+    fitted_strategy_score = model.predict(test_data)
+    validation_strategy_score = model.predict(val_data)
+
+    error = mean_squared_error(np.squeeze(train_target), np.squeeze(training_strategy_score))
 
     fitting_dictionary = {
-        'training_strategy_score': training_strategy_score,
-        'fitted_strategy_score': fitted_strategy_score,
-        'validation_strategy_score': validation_strategy_score,
+        'training_strategy_score': target_scaler.inverse_transform(training_strategy_score),
+        'fitted_strategy_score': target_scaler.inverse_transform(fitted_strategy_score),
+        'validation_strategy_score': target_scaler.inverse_transform(validation_strategy_score),
         'error': error,
     }
 
@@ -118,98 +353,48 @@ def tensorflow_fitting(train_indices, test_indices, validation_indices, input_da
 
 
 def tensorflow_sequence_fitting(
-        output_dir, train_indices, test_indices, validation_indices, x, y, strategy_dictionary, train_steps=1000):
-    x = x.astype(np.float32)
-    y = y.astype(np.float32)
+        train_indices,
+        test_indices,
+        validation_indices,
+        input_data,
+        target_data):
 
-    x = x[:, :, np.newaxis]
-    y = y[:, np.newaxis]
+    input_data = input_data[:, :, None]
 
-    if exists(output_dir):
-        rmtree(output_dir)
+    target_scaler = StandardScaler()
+    target_data = target_scaler.fit_transform(target_data.reshape(-1, 1))
 
-    config = {
-        'name': 'time_series',
-        'output_dir': output_dir,
-        'eval_every_n_steps': 5,
-        'train_steps': train_steps,
-        'train_input_data_config': {
-            'input_type': plx.configs.InputDataConfig.NUMPY,
-            'pipeline_config': {'name': 'train', 'batch_size': 64, 'num_epochs': 1,
-                                'shuffle': False},
-            'x': {'x': x[train_indices]},
-            'y': y[train_indices]
-        },
-        'eval_input_data_config': {
-            'input_type': plx.configs.InputDataConfig.NUMPY,
-            'pipeline_config': {'name': 'eval', 'batch_size': 32, 'num_epochs': 1,
-                                'shuffle': False},
-            'x': {'x': np.array(x[test_indices])},
-            'y': y[test_indices]
-        },
-        'estimator_config': {'output_dir': output_dir},
-        'model_config': {
-            'module': 'Regressor',
-            'loss_config': {'module': 'mean_squared_error'},
-            'eval_metrics_config': [{'module': 'streaming_root_mean_squared_error'},
-                                    {'module': 'streaming_mean_absolute_error'}],
-            'optimizer_config': {'module': 'adagrad', 'learning_rate': strategy_dictionary['learning_rate']},
-            'graph_config': {
-                'name': 'regressor',
-                'features': ['x'],
-                'definition': [
-                    (plx.layers.LSTM, {'num_units': strategy_dictionary['num_units'],
-                                       'num_layers': strategy_dictionary['num_layers']}),
-                    (plx.layers.FullyConnected, {'num_units': strategy_dictionary['output_units']}),
-                ]
-            }
-        }
-    }
-    experiment_config = plx.configs.ExperimentConfig.read_configs(config)
-    xp = plx.experiments.create_experiment(experiment_config)
-    xp.continuous_train_and_evaluate()
+    train_data = input_data[train_indices, :, :]
+    train_target = target_data[train_indices, None]
 
-    train_score = [i['results'] for i in xp.estimator.predict(numpy_input_fn({'x': x[train_indices]}, shuffle=False))]
-    predicted = [i['results'] for i in xp.estimator.predict(numpy_input_fn({'x': x[test_indices]}, shuffle=False))]
-    validation = [i['results'] for i in xp.estimator.predict(numpy_input_fn(
-        {'x': x[validation_indices]}, shuffle=False))]
+    test_data = input_data[test_indices, :, :]
 
-    error = mean_squared_error(y[train_indices], train_score)
+    val_data = input_data[validation_indices, :, :]
+
+    input_size = input_data.shape
+
+    model = Sequential()
+
+    model.add(Dropout(0.2, input_shape=(input_size[1], input_size[2],)))
+    model.add(Conv1D(2, 2, activation='relu'))
+    model.add(MaxPooling1D(2))
+    model.add(Dense(2))
+    model.add(LSTM(1, dropout=0.2, recurrent_dropout=0.2))
+    model.compile(loss='mean_squared_error', optimizer='adam')
+
+    model.summary()
+
+    training_strategy_score = model.predict(train_data)
+    fitted_strategy_score = model.predict(test_data)
+    validation_strategy_score = model.predict(val_data)
+
+    error = mean_squared_error(np.squeeze(train_target), np.squeeze(training_strategy_score))
 
     fitting_dictionary = {
-        'training_strategy_score': np.concatenate(train_score, axis=0),
-        'fitted_strategy_score': np.concatenate(predicted, axis=0),
-        'validation_strategy_score': np.concatenate(validation, axis=0),
+        'training_strategy_score': target_scaler.inverse_transform(training_strategy_score),
+        'fitted_strategy_score': target_scaler.inverse_transform(fitted_strategy_score),
+        'validation_strategy_score': target_scaler.inverse_transform(validation_strategy_score),
         'error': error,
     }
 
     return fitting_dictionary, fitting_dictionary['error']
-
-
-def input_fn(input_local, target):
-    return tf.constant(input_local), tf.constant(target)
-
-
-def random_search(clf, param_set, train_indices, test_indices, validation_indices, input_data, target_data):
-    random_search_local = RandomizedSearchCV(clf, param_distributions=param_set, cv=5, n_jobs=-1)
-
-    random_search_local.fit(input_data[train_indices], target_data[train_indices])
-
-    training_strategy_score = random_search_local.predict(input_data[train_indices])
-
-    error = mean_squared_error(training_strategy_score, target_data[train_indices])
-
-    if len(test_indices) != 0:
-        fitted_strategy_score = random_search_local.predict(input_data[test_indices])
-        validation_strategy_score = random_search_local.predict(input_data[validation_indices])
-    else:
-        fitted_strategy_score = []
-        validation_strategy_score = []
-
-    fitting_dictionary = {
-        'training_strategy_score': training_strategy_score,
-        'fitted_strategy_score': fitted_strategy_score,
-        'validation_strategy_score': validation_strategy_score,
-        'model': random_search,
-    }
-    return fitting_dictionary, error
