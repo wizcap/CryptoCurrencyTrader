@@ -79,7 +79,7 @@ def random_forest_fitting(
 
     param_set = {'n_estimators': (2, 1000),
                  'max_depth': (1, 10),
-                 'max_features': (1, 3)}
+                 'max_features': (1, 2)}
 
     if strategy_dictionary['regression_mode'] == 'regression':
         bo = BayesianOptimization(
@@ -306,6 +306,9 @@ def extra_trees_fitting(
 
 
 def tensorflow_fitting(train_indices, test_indices, validation_indices, input_data, target_data):
+
+    """use keras/tensorflow to fit training inputs to targets and predict targets"""
+
     target_scaler = StandardScaler()
     target_data = target_scaler.fit_transform(target_data.reshape(-1, 1))
 
@@ -324,14 +327,14 @@ def tensorflow_fitting(train_indices, test_indices, validation_indices, input_da
 
     dropout1 = Dropout(0.2)(input1)
     dense1 = Dense(input_size[2], activation='tanh')(dropout1)
-    l_cov1 = Conv1D(input_size[2], 2, activation='tanh')(dense1)
-    dense2 = Dense(input_size[2], activation='tanh')(l_cov1)
-    preds = MaxPooling1D(2)(dense2)
+    preds = MaxPooling1D(2)(dense1)
 
     model = Model(input1, preds)
 
-    model.compile(loss='mean_squared_error',
-                  optimizer='rmsprop')
+    model.compile(
+        loss='mean_squared_error',
+        optimizer='rmsprop')
+
     model.summary()
 
     model.fit(x=train_data, y=train_target)
@@ -343,9 +346,9 @@ def tensorflow_fitting(train_indices, test_indices, validation_indices, input_da
     error = mean_squared_error(np.squeeze(train_target), np.squeeze(training_strategy_score))
 
     fitting_dictionary = {
-        'training_strategy_score': target_scaler.inverse_transform(training_strategy_score),
-        'fitted_strategy_score': target_scaler.inverse_transform(fitted_strategy_score),
-        'validation_strategy_score': target_scaler.inverse_transform(validation_strategy_score),
+        'training_strategy_score': training_strategy_score,
+        'fitted_strategy_score': fitted_strategy_score,
+        'validation_strategy_score': validation_strategy_score,
         'error': error,
     }
 
@@ -358,6 +361,8 @@ def tensorflow_sequence_fitting(
         validation_indices,
         input_data,
         target_data):
+
+    """use keras/tensorflow to fit training inputs to targets as sequence and predict targets"""
 
     input_data = input_data[:, :, None]
 
@@ -391,9 +396,9 @@ def tensorflow_sequence_fitting(
     error = mean_squared_error(np.squeeze(train_target), np.squeeze(training_strategy_score))
 
     fitting_dictionary = {
-        'training_strategy_score': target_scaler.inverse_transform(training_strategy_score),
-        'fitted_strategy_score': target_scaler.inverse_transform(fitted_strategy_score),
-        'validation_strategy_score': target_scaler.inverse_transform(validation_strategy_score),
+        'training_strategy_score': training_strategy_score,
+        'fitted_strategy_score': fitted_strategy_score,
+        'validation_strategy_score': validation_strategy_score,
         'error': error,
     }
 

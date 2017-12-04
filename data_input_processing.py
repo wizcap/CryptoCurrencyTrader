@@ -56,6 +56,7 @@ class Data:
         self.scraper_score_texts = []
         self.classification_score = []
         self.momentum = []
+        self.mom_strategy = []
 
         if web_flag:
             self.candle_input_web(currency_pair, start, end, period)
@@ -138,19 +139,23 @@ class Data:
 
     def calculate_indicators(self, strategy_dictionary, prior_data_obj=None, non_price_data=False):
 
+        """calculate indicators for training machine learning algorithm"""
+
         self.exponential_moving_average_1 = exponential_moving_average(
-            self.fractional_close[:-1],
+            self.close[:-1],
             strategy_dictionary['windows'][0])
 
         self.exponential_moving_average_2 = exponential_moving_average(
-            self.fractional_close[:-1],
+            self.close[:-1],
             3 * strategy_dictionary['windows'][0])
 
         self.momentum = self.exponential_moving_average_1 - self.exponential_moving_average_2
 
         self.exponential_moving_volatility_1 = exponential_moving_average(
             self.momentum ** 2,
-            3 * strategy_dictionary['windows'][0])
+            10 * strategy_dictionary['windows'][0])
+
+        self.momentum_strategy()
 
         if non_price_data:
             self.non_price_data(strategy_dictionary, prior_data_obj=prior_data_obj)
@@ -209,8 +214,17 @@ class Data:
 
         logging.getLogger().setLevel(logging.WARNING)
 
+    def momentum_strategy(self):
+
+        """simple momentum strategy for comparison"""
+
+        self.mom_strategy = self.momentum / self.exponential_moving_volatility_1
+
 
 class TradingTargets:
+
+    """Class to produce targets for machine learning algorithms to output"""
+
     def __init__(self, normalise_data_obj):
         self.fractional_close = normalise_data_obj.fractional_close
         self.high = normalise_data_obj.high
@@ -218,6 +232,9 @@ class TradingTargets:
         self.buy_sell = []
 
     def ideal_strategy_score(self, strategy_dictionary):
+
+        """score based on max or min value before next trend change greater than fees"""
+
         effective_fee_factor = effective_fee(strategy_dictionary)
         fractional_close_length = len(self.fractional_close)
 
@@ -258,7 +275,27 @@ class TradingTargets:
             elif index + while_counter == fractional_close_length:
                 self.strategy_score[index:] = 1
 
+    def n_steps_ahead_score(self, n_steps):
+
+        """training target based on average score n steps ahead"""
+
+        fractional_close_length = len(self.fractional_close)
+
+        self.strategy_score = np.zeros(fractional_close_length)
+
+        for index in range(fractional_close_length):
+
+            end_index = np.minimum(index + n_steps + 1, fractional_close_length - 1)
+
+            self.strategy_score[index] = np.product(self.fractional_close[index+1:end_index])
+
+        self.strategy_score[np.isnan(self.strategy_score)] = 1
+
+
     def convert_score_to_classification_target(self):
+
+        """convert continuous target to discrete classfication target"""
+
         self.classification_score = np.zeros(len(self.strategy_score))
         self.classification_score[self.strategy_score > 1] = 1
         self.classification_score[self.strategy_score < 1] = -1
@@ -266,6 +303,9 @@ class TradingTargets:
 
 
 def effective_fee(strategy_dictionary):
+
+    """effective fee as a ratio of a transaction"""
+
     return 1 - strategy_dictionary['transaction_fee'] - strategy_dictionary['bid_ask_spread']
 
 
@@ -311,8 +351,16 @@ def nan_array_initialise(size):
 
 
 def generate_training_variables(data_obj, strategy_dictionary, prior_data_obj=None):
+
+    """return all of the training variables"""
+
     trading_targets = TradingTargets(data_obj)
-    trading_targets.ideal_strategy_score(strategy_dictionary)
+
+    if strategy_dictionary['target_score'] == 'ideal_strategy':
+        trading_targets.ideal_strategy_score(strategy_dictionary)
+
+    elif strategy_dictionary['target_score'] == 'n_steps':
+        trading_targets.n_steps_ahead_score(strategy_dictionary['target_step'])
 
     trading_targets.convert_score_to_classification_target()
 
@@ -343,8 +391,8 @@ def generate_training_variables(data_obj, strategy_dictionary, prior_data_obj=No
 
     fitting_inputs_scaled = scale(fitting_inputs)
 
-    continuous_targets = trading_targets.strategy_score[1:]
-    classification_targets = trading_targets.classification_score[1:]
+    continuous_targets = scale(trading_targets.strategy_score[1:])
+    classification_targets = scale(trading_targets.classification_score[1:])
 
     return fitting_inputs_scaled, continuous_targets, classification_targets
 
@@ -384,6 +432,7 @@ def fast_ica_transform(strategy_dictionary, fitting_inputs_scaled):
         ica.fit(fitting_inputs_scaled)
 
         fitting_inputs_scaled = ica.transform(fitting_inputs_scaled)
+
     except:
         strategy_dictionary['preprocessing'] = 'None'
 

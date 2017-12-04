@@ -12,10 +12,9 @@ def random_search(strategy_dictionary_local, n_iterations):
 
     toc = tic()
 
-    data_local, data_2 = import_data(strategy_dictionary_local)
+    data_local = import_data(strategy_dictionary_local)
     fitting_inputs_local, continuous_targets, classification_targets = input_processing(
         data_local,
-        data_2,
         strategy_dictionary_local)
 
     counter = 0
@@ -56,13 +55,17 @@ def random_search(strategy_dictionary_local, n_iterations):
 
 
 def randomise_dictionary_inputs(strategy_dictionary_local):
+
+    """ generate parameters for next step of random search """
+
     strategy_dictionary_local['ml_mode'] = choice([
         'svm',
         'randomforest',
         'adaboost',
         'gradientboosting',
-        'extratreesfitting'])
-    strategy_dictionary_local['regression_mode'] = choice(['regression', 'classification'])
+        'extratreesfitting'
+    ])
+
     strategy_dictionary_local['preprocessing'] = choice(['PCA', 'FastICA', 'None'])
     return strategy_dictionary_local
 
@@ -71,26 +74,26 @@ if __name__ == '__main__':
     strategy_dictionary = {
         'trading_currencies': ['USDT', 'BTC'],
         'ticker_1': 'USDT_BTC',
-        'ticker_2': 'BTC_ETH',
         'scraper_currency_1': 'BTC',
-        'scraper_currency_2': 'ETH',
         'candle_size': 300,
-        'n_days': 10,
+        'n_days': 20,
         'offset': 0,
-        'bid_ask_spread': 0.002,
+        'bid_ask_spread': 0.004,
         'transaction_fee': 0.0025,
-        'train_test_validation_ratios': [0.5, 0.45, 0.05],
+        'train_test_validation_ratios': [0.7, 0.2, 0.1],
         'output_flag': True,
-        'plot_flag': False,
+        'plot_flag': True,
         'ml_iterations': 10,
-        'target_score': 'idealstrategy',
-        'windows': [10, 50, 100],
+        'target_score': 'n_steps',
+        'target_step': 50,
+        'windows': [100,],
         'web_flag': True,
         'filename1': "USDT_BTC.csv",
-        'filename2': "BTC_ETH.csv",
+        'regression_mode': 'regression',
+        'momentum_compare': True,
     }
 
-    search_iterations = 5
+    search_iterations = 10
 
     strategy_dictionary, fitting_inputs, fitting_targets, data_to_predict = random_search(
         strategy_dictionary,

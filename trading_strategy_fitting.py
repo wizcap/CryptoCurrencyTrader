@@ -88,31 +88,15 @@ def meta_fitting(fitting_inputs, fitting_targets, strategy_dictionary):
     return fitting_dictionary
 
 
-def input_processing(data_to_predict_local, data_input_2, strategy_dictionary):
+def input_processing(data_to_predict_local, strategy_dictionary):
+
+    """retrieve and process continuous and classification targets"""
+
     fitting_inputs, continuous_targets, classification_targets = generate_training_variables(
         data_to_predict_local,
         strategy_dictionary)
 
-    fitting_inputs_2, fitting_targets_2, classification_targets_2 = generate_training_variables(
-        data_input_2,
-        strategy_dictionary,
-        prior_data_obj=data_to_predict_local)
-
-    fitting_inputs, fitting_inputs_2 = trim_inputs(fitting_inputs, fitting_inputs_2)
-    fitting_inputs = np.hstack((fitting_inputs, fitting_inputs_2))
-
     return fitting_inputs, continuous_targets, classification_targets
-
-
-def trim_inputs(fitting_inputs, fitting_inputs_2):
-    length_1 = len(fitting_inputs)
-    length_2 = len(fitting_inputs_2)
-
-    min_length = np.minimum(length_1, length_2)
-
-    fitting_inputs = fitting_inputs[-min_length:]
-    fitting_inputs_2 = fitting_inputs_2[-min_length:]
-    return fitting_inputs, fitting_inputs_2
 
 
 def tic():
@@ -156,6 +140,9 @@ def retrieve_data(ticker, scraper_currency, strategy_dictionary, filename):
 
 
 def offset_scan_validation(strategy_dictionary, data_to_predict, fitting_inputs, fitting_targets, offsets):
+
+    """repeat fitting at a range of earlier offset start times to check for overfitting"""
+
     strategy_dictionary['plot_flag'] = False
     strategy_dictionary['ouput_flag'] = True
 
@@ -175,6 +162,9 @@ def offset_scan_validation(strategy_dictionary, data_to_predict, fitting_inputs,
 
 
 def tensorflow_offset_scan_validation(strategy_dictionary, data_to_predict, fitting_inputs, fitting_targets, offsets):
+
+    """repeat tensorflow fitting at a range of earlier offset start times to check for overfitting"""
+
     strategy_dictionary['plot_flag'] = False
     strategy_dictionary['ouput_flag'] = True
     
@@ -201,16 +191,13 @@ def import_data(strategy_dictionary):
         strategy_dictionary,
         strategy_dictionary['filename1'])
 
-    data_2 = retrieve_data(
-        strategy_dictionary['ticker_2'],
-        strategy_dictionary['scraper_currency_2'],
-        strategy_dictionary,
-        strategy_dictionary['filename2'])
-
-    return data_to_predict, data_2
+    return data_to_predict
 
 
 def fit_strategy(strategy_dictionary, data_to_predict, fitting_inputs, fitting_targets):
+
+    """fit machine learning algorithm to data and return predictions and profit"""
+
     toc = tic()
 
     fitting_dictionary = meta_fitting(fitting_inputs, fitting_targets, strategy_dictionary)
@@ -223,6 +210,9 @@ def fit_strategy(strategy_dictionary, data_to_predict, fitting_inputs, fitting_t
 
 
 def fit_tensorflow(strategy_dictionary, data_to_predict, fitting_inputs, fitting_targets):
+
+    """fit with tensorflow and return predictions and profit"""
+
     toc = tic()
 
     train_indices, test_indices, validation_indices = train_test_validation_indices(
@@ -235,7 +225,6 @@ def fit_tensorflow(strategy_dictionary, data_to_predict, fitting_inputs, fitting
             validation_indices,
             fitting_inputs,
             fitting_targets)
-
 
     else:
         fitting_dictionary, error = tensorflow_fitting(
@@ -256,6 +245,10 @@ def fit_tensorflow(strategy_dictionary, data_to_predict, fitting_inputs, fitting
 
 
 def underlined_output(string):
+
+    """underline printed output"""
+
     print string
     print '----------------------'
     print '\n'
+
