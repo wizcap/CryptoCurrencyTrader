@@ -33,7 +33,7 @@ With none of the different automated machine learning optimisation strategies wa
 In order to estimate the amount of overfitting, a series of offset hyperparameter fittings are performed. If the trading strategy is not overfit, fitting should be approximately consistent across at all offsets in terms of profit fraction and fitting error.
 
 ## To Do
-Due to reducing the number of data inputs and allowing a the strategy to continuously change the amount of currency in position, as opposed to simply being in or out, performance is a lot more stable although still not profitable compared to buy and hold (particularly with the excellent performance of bitconi recently.)
+Due to reducing the number of data inputs and allowing a the strategy to continuously change the amount of currency in position, as opposed to simply being in or out, performance is a lot more stable although still not profitable compared to buy and hold (particularly with the excellent performance of bitcoin recently.)
 
 #Setup
 To run as a standalone script add a file named API_settings.py containing your poloniex API, google and reddit API login:
