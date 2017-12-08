@@ -381,9 +381,8 @@ def tensorflow_sequence_fitting(
     model = Sequential()
 
     model.add(Dropout(0.2, input_shape=(input_size[1], input_size[2],)))
-    model.add(Conv1D(2, 2, activation='relu'))
-    model.add(MaxPooling1D(2))
     model.add(Dense(2))
+    model.add(MaxPooling1D(2))
     model.add(LSTM(1, dropout=0.2, recurrent_dropout=0.2))
     model.compile(loss='mean_squared_error', optimizer='adam')
 

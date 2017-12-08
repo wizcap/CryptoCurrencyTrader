@@ -67,9 +67,9 @@ def meta_fitting(fitting_inputs, fitting_targets, strategy_dictionary):
 
     if strategy_dictionary['regression_mode'] == 'regression':
         fitting_dictionary = {
-            'training_strategy_score': target_scaler.inverse_transform(training_strategy_score),
-            'fitted_strategy_score': target_scaler.inverse_transform(fitted_strategy_score),
-            'validation_strategy_score': target_scaler.inverse_transform(validation_strategy_score),
+            'training_strategy_score': training_strategy_score,
+            'fitted_strategy_score': fitted_strategy_score,
+            'validation_strategy_score':validation_strategy_score,
             'train_indices': train_indices,
             'test_indices': test_indices,
             'validation_indices': validation_indices,
@@ -202,7 +202,10 @@ def fit_strategy(strategy_dictionary, data_to_predict, fitting_inputs, fitting_t
 
     fitting_dictionary = meta_fitting(fitting_inputs, fitting_targets, strategy_dictionary)
 
-    fitting_dictionary = post_process_training_results(strategy_dictionary, fitting_dictionary, data_to_predict)
+    fitting_dictionary, strategy_dictionary = post_process_training_results(
+        strategy_dictionary,
+        fitting_dictionary,
+        data_to_predict)
 
     profit_factor = output_strategy_results(strategy_dictionary, fitting_dictionary, data_to_predict, toc)
 
@@ -238,7 +241,10 @@ def fit_tensorflow(strategy_dictionary, data_to_predict, fitting_inputs, fitting
     fitting_dictionary['test_indices'] = test_indices
     fitting_dictionary['validation_indices'] = validation_indices
 
-    fitting_dictionary = post_process_training_results(strategy_dictionary, fitting_dictionary, data_to_predict)
+    fitting_dictionary, strategy_dictionary = post_process_training_results(
+        strategy_dictionary,
+        fitting_dictionary,
+        data_to_predict)
 
     profit_factor = output_strategy_results(strategy_dictionary, fitting_dictionary, data_to_predict, toc)
     return fitting_dictionary, error, profit_factor
@@ -251,4 +257,6 @@ def underlined_output(string):
     print string
     print '----------------------'
     print '\n'
+
+
 

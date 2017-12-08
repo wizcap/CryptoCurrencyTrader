@@ -3,7 +3,7 @@ from random import choice
 from trading_strategy_fitting import fit_strategy, offset_scan_validation, tic, underlined_output, import_data,\
     input_processing
 from data_input_processing import preprocessing_inputs
-from strategy_evaluation import output_strategy_results
+from strategy_evaluation import output_strategy_results, simple_momentum_comparison
 
 
 def random_search(strategy_dictionary_local, n_iterations):
@@ -49,7 +49,16 @@ def random_search(strategy_dictionary_local, n_iterations):
             fitting_dictionary_optimum = fitting_dictionary
 
     underlined_output('Best strategy fit')
-    output_strategy_results(strategy_dictionary_optimum, fitting_dictionary_optimum, data_local, toc)
+
+    if strategy_dictionary['plot_last']:
+        strategy_dictionary['plot_flag'] = True
+
+    output_strategy_results(
+        strategy_dictionary_optimum,
+        fitting_dictionary_optimum,
+        data_local,
+        toc,
+        momentum_dict=simple_momentum_comparison(data_local, strategy_dictionary, fitting_dictionary))
 
     return strategy_dictionary_optimum, fitting_inputs_local, fitting_targets_local, data_local
 
@@ -76,24 +85,25 @@ if __name__ == '__main__':
         'ticker_1': 'USDT_BTC',
         'scraper_currency_1': 'BTC',
         'candle_size': 300,
-        'n_days': 20,
+        'n_days': 30,
         'offset': 0,
         'bid_ask_spread': 0.004,
         'transaction_fee': 0.0025,
-        'train_test_validation_ratios': [0.7, 0.2, 0.1],
+        'train_test_validation_ratios': [0.5, 0.2, 0.3],
         'output_flag': True,
-        'plot_flag': True,
-        'ml_iterations': 10,
+        'plot_flag': False,
+        'plot_last': True,
+        'ml_iterations': 25,
         'target_score': 'n_steps',
-        'target_step': 50,
-        'windows': [100,],
+        'target_step': 100,
+        'windows': [50,],
         'web_flag': True,
         'filename1': "USDT_BTC.csv",
         'regression_mode': 'regression',
         'momentum_compare': True,
     }
 
-    search_iterations = 10
+    search_iterations = 25
 
     strategy_dictionary, fitting_inputs, fitting_targets, data_to_predict = random_search(
         strategy_dictionary,

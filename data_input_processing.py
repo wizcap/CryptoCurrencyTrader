@@ -151,9 +151,9 @@ class Data:
 
         self.momentum = self.exponential_moving_average_1 - self.exponential_moving_average_2
 
-        self.exponential_moving_volatility_1 = exponential_moving_average(
+        self.exponential_moving_volatility_1 = np.sqrt(exponential_moving_average(
             self.momentum ** 2,
-            10 * strategy_dictionary['windows'][0])
+            10 * strategy_dictionary['windows'][0]))
 
         self.momentum_strategy()
 
