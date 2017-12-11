@@ -1,16 +1,14 @@
 import numpy as np
-from random import choice
+from random import choice, randint
 from trading_strategy_fitting import fit_strategy, offset_scan_validation, tic, underlined_output, import_data,\
     input_processing
 from data_input_processing import preprocessing_inputs
 from strategy_evaluation import output_strategy_results, simple_momentum_comparison
 
 
-def random_search(strategy_dictionary_local, n_iterations):
+def random_search(strategy_dictionary_local, n_iterations, toc):
 
-    """random search to find optimum machien learning algorithm and preprocessing"""
-
-    toc = tic()
+    """random search to find optimum machine learning algorithm and preprocessing"""
 
     data_local = import_data(strategy_dictionary_local)
     fitting_inputs_local, continuous_targets, classification_targets = input_processing(
@@ -35,7 +33,7 @@ def random_search(strategy_dictionary_local, n_iterations):
             strategy_dictionary_local,
             fitting_inputs_local)
 
-        fitting_dictionary, profit_factor = fit_strategy(
+        fitting_dictionary, profit_factor, strategy_dictionary_local = fit_strategy(
             strategy_dictionary,
             data_local,
             fitting_inputs_local,
@@ -48,6 +46,79 @@ def random_search(strategy_dictionary_local, n_iterations):
             strategy_dictionary_optimum = strategy_dictionary_local
             fitting_dictionary_optimum = fitting_dictionary
 
+    profit, test_profit = output_strategy_results(
+        strategy_dictionary_optimum,
+        fitting_dictionary_optimum,
+        data_local,
+        toc)
+
+    return strategy_dictionary_optimum,\
+        fitting_dictionary_optimum,\
+        fitting_inputs_local,\
+        fitting_targets_local,\
+        data_local,\
+        test_profit
+
+
+def randomise_dictionary_inputs(strategy_dictionary_local):
+
+    """ generate parameters for next step of random search """
+
+    strategy_dictionary_local['ml_mode'] = choice([
+        'svm',
+        'randomforest',
+        #'adaboost',
+        'gradientboosting',
+        'extratreesfitting'
+    ])
+
+    strategy_dictionary_local['preprocessing'] = choice(['PCA', 'FastICA', 'None'])
+    return strategy_dictionary_local
+
+
+def randomise_time_inputs(strategy_dictionary_local):
+
+    """ generate time parameters for next step of random search """
+
+    window = 1000
+
+    strategy_dictionary_local['windows'] = randint(1, window / 10)
+
+    strategy_dictionary_local['target_step'] = randint(1, window)
+
+    return strategy_dictionary_local
+
+
+def fit_time_scale(strategy_dictionary_input, search_iterations_local, time_iterations):
+
+    """ fit timescale variables"""
+
+    toc = tic()
+    counter = 0
+    strategy_dictionary_optimum = []
+    optimum_profit = -2
+
+    while counter < time_iterations:
+
+        strategy_dictionary_input = randomise_time_inputs(strategy_dictionary_input)
+
+        strategy_dictionary_local,\
+            fitting_dictionary_local,\
+            fitting_inputs_local,\
+            fitting_targets_local,\
+            data_local,\
+            test_profit\
+            = random_search(
+                strategy_dictionary_input,
+                search_iterations_local,
+                toc)
+
+        if test_profit > optimum_profit:
+            strategy_dictionary_optimum = strategy_dictionary_local
+            fitting_dictionary_optimum = fitting_dictionary_local
+
+        counter += 1
+
     underlined_output('Best strategy fit')
 
     if strategy_dictionary['plot_last']:
@@ -58,25 +129,9 @@ def random_search(strategy_dictionary_local, n_iterations):
         fitting_dictionary_optimum,
         data_local,
         toc,
-        momentum_dict=simple_momentum_comparison(data_local, strategy_dictionary, fitting_dictionary))
+        momentum_dict=simple_momentum_comparison(data_local, strategy_dictionary_optimum, fitting_dictionary_optimum))
 
-    return strategy_dictionary_optimum, fitting_inputs_local, fitting_targets_local, data_local
-
-
-def randomise_dictionary_inputs(strategy_dictionary_local):
-
-    """ generate parameters for next step of random search """
-
-    strategy_dictionary_local['ml_mode'] = choice([
-        'svm',
-        'randomforest',
-        'adaboost',
-        'gradientboosting',
-        'extratreesfitting'
-    ])
-
-    strategy_dictionary_local['preprocessing'] = choice(['PCA', 'FastICA', 'None'])
-    return strategy_dictionary_local
+    return strategy_dictionary_optimum
 
 
 if __name__ == '__main__':
@@ -85,29 +140,29 @@ if __name__ == '__main__':
         'ticker_1': 'USDT_BTC',
         'scraper_currency_1': 'BTC',
         'candle_size': 300,
-        'n_days': 30,
+        'n_days': 10,
         'offset': 0,
-        'bid_ask_spread': 0.004,
+        'bid_ask_spread': 0.0007,
         'transaction_fee': 0.0025,
         'train_test_validation_ratios': [0.5, 0.2, 0.3],
         'output_flag': True,
         'plot_flag': False,
         'plot_last': True,
-        'ml_iterations': 25,
+        'ml_iterations': 10,
         'target_score': 'n_steps',
-        'target_step': 100,
-        'windows': [50,],
         'web_flag': True,
         'filename1': "USDT_BTC.csv",
         'regression_mode': 'regression',
         'momentum_compare': True,
     }
 
-    search_iterations = 25
+    search_iterations = 10
+    time_iterations = 10
 
-    strategy_dictionary, fitting_inputs, fitting_targets, data_to_predict = random_search(
+    strategy_dictionary, fitting_inputs, fitting_targets, data_to_predict = fit_time_scale(
         strategy_dictionary,
-        search_iterations)
+        search_iterations,
+        time_iterations)
 
     underlined_output('Offset validation')
     offsets = np.linspace(0, 300, 5)

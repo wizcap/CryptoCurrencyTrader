@@ -75,7 +75,7 @@ def fit_trade_threshold(strategy_score, fractional_price, strategy_dictionary):
 
     """ fit minimum signal change to execute trade """
 
-    threshold_range = np.logspace(-4, 2, 50)
+    threshold_range = np.linspace(0, 1, 30)# np.logspace(-3, 2, 100)
 
     best_profit = -1
     best_up_threshold = 0
@@ -86,10 +86,6 @@ def fit_trade_threshold(strategy_score, fractional_price, strategy_dictionary):
         low_threshold_range = threshold_range[threshold_range < up_threshold]
 
         for low_threshold in low_threshold_range:
-
-            #TEST
-            low_threshold = 0.1
-            up_threshold = 0.9
 
             profit_vector, n_trades, _, _, _ = strategy_profit(
                 strategy_score,
@@ -120,13 +116,25 @@ def post_process_training_results(strategy_dictionary, fitting_dictionary, data)
         strategy_dictionary)
 
     fitting_dictionary['portfolio_value'],\
-    fitting_dictionary['n_trades'],\
-    cash_value,\
-    crypto_value,\
-    strategy_dictionary['strategy_score']\
+        fitting_dictionary['n_trades'],\
+        cash_value,\
+        crypto_value,\
+        fitting_dictionary['validation_strategy_score']\
         = strategy_profit(
         fitting_dictionary['validation_strategy_score'],
         data.fractional_close[fitting_dictionary['validation_indices']],
+        strategy_dictionary,
+        strategy_dictionary['low_threshold'],
+        strategy_dictionary['up_threshold'])
+
+    fitting_dictionary['test_portfolio_value'],\
+        fitting_dictionary['test_trades'],\
+        _,\
+        _,\
+        fitting_dictionary['fitted_strategy_score']\
+        = strategy_profit(
+        fitting_dictionary['fitted_strategy_score'],
+        data.fractional_close[fitting_dictionary['test_indices']],
         strategy_dictionary,
         strategy_dictionary['low_threshold'],
         strategy_dictionary['up_threshold'])
@@ -165,16 +173,23 @@ def output_strategy_results(strategy_dictionary, fitting_dictionary, data_to_pre
     """print or plot results of machine learning fitting"""
 
     prediction_data = data_to_predict.close[fitting_dictionary['validation_indices']]
+    test_data = data_to_predict.close[fitting_dictionary['test_indices']]
+
+    profit = profit_factor(
+            fitting_dictionary['portfolio_value'],
+            prediction_data)
+
+    test_profit = profit_factor(
+            fitting_dictionary['test_portfolio_value'],
+            test_data)
 
     if strategy_dictionary['output_flag']:
         print "Fitting time: ", toc()
 
-        print "Fractional profit compared to buy and hold: ", profit_factor(
-            fitting_dictionary['portfolio_value'],
-            prediction_data)
+        print "Fractional profit compared to buy and hold: ", profit
         print "Mean squared error: ", fitting_dictionary['error']
-        print "Number of days: ", strategy_dictionary['n_days']
-        print "Candle time period:", strategy_dictionary['candle_size']
+        print "Window: ", strategy_dictionary['windows']
+        print "Target step :", strategy_dictionary['target_step']
         print "Fitting model: ", strategy_dictionary['ml_mode']
         print "Regression/classification: ", strategy_dictionary['regression_mode']
         print "Number of trades: ", fitting_dictionary['n_trades']
@@ -191,14 +206,11 @@ def output_strategy_results(strategy_dictionary, fitting_dictionary, data_to_pre
         plt.figure(1)
         close_price, = plt.plot(prediction_data)
         portfolio_value, = plt.plot(
-            prediction_data[strategy_dictionary['windows'][0]]
-            * fitting_dictionary['portfolio_value'])
+            prediction_data[0] * fitting_dictionary['portfolio_value'])
 
         mom_strategy = []
         if momentum_dict is not None:
-            mom_strategy, = plt.plot(
-                prediction_data[strategy_dictionary['windows'][0]]
-                * momentum_dict['portfolio_value'])
+            mom_strategy, = plt.plot(prediction_data[0] * momentum_dict['portfolio_value'])
 
         plt.legend([close_price, portfolio_value, mom_strategy], ['Close Price', 'Portfolio Value', 'Momentum Strategy'])
         plt.xlabel('Candle number')
@@ -215,31 +227,34 @@ def output_strategy_results(strategy_dictionary, fitting_dictionary, data_to_pre
 
         plt.show()
     
-    return profit_factor
+    return profit, test_profit
 
 
 def simple_momentum_comparison(data_obj, strategy_dictionary, fitting_dictionary):
 
     """implement simple momentum strategy for comparison to machine learning"""
 
+    test_data = data_obj.fractional_close[fitting_dictionary['test_indices']]
+    val_data = data_obj.fractional_close[fitting_dictionary['validation_indices']]
+
     test_momentum = data_obj.mom_strategy[fitting_dictionary['test_indices']]
     val_momentum = data_obj.mom_strategy[fitting_dictionary['validation_indices']]
 
-    momentum_dictionary = {'validation_score': val_momentum}
+    momentum_dictionary = {}
 
     strategy_dictionary = fit_trade_threshold(
         test_momentum,
-        data_obj.fractional_close[fitting_dictionary['test_indices']],
+        test_data,
         strategy_dictionary)
 
     momentum_dictionary['portfolio_value'],\
-    momentum_dictionary['n_trades'],\
-    _,\
-    _,\
-    momentum_dictionary['validation_score']\
+        momentum_dictionary['n_trades'],\
+        _,\
+        _,\
+        momentum_dictionary['validation_score']\
         = strategy_profit(
         val_momentum,
-        data_obj.fractional_close[fitting_dictionary['validation_indices']],
+        val_data,
         strategy_dictionary,
         strategy_dictionary['low_threshold'],
         strategy_dictionary['up_threshold'])

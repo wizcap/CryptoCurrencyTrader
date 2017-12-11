@@ -209,7 +209,7 @@ def fit_strategy(strategy_dictionary, data_to_predict, fitting_inputs, fitting_t
 
     profit_factor = output_strategy_results(strategy_dictionary, fitting_dictionary, data_to_predict, toc)
 
-    return fitting_dictionary, profit_factor
+    return fitting_dictionary, profit_factor, strategy_dictionary
 
 
 def fit_tensorflow(strategy_dictionary, data_to_predict, fitting_inputs, fitting_targets):
@@ -257,6 +257,20 @@ def underlined_output(string):
     print string
     print '----------------------'
     print '\n'
+
+
+def normalise_and_centre_score(strategy_score, up_threshold, low_threshold):
+
+    """normalise and centre score when fitting thresholds"""
+
+    temp_score = strategy_score
+    temp_score[temp_score > up_threshold] = up_threshold
+    temp_score[temp_score < -up_threshold] = -up_threshold
+    temp_score[abs(temp_score) < low_threshold] = 0
+    temp_score = temp_score / (2 * up_threshold)
+    temp_score = temp_score + 0.5
+
+    return temp_score
 
 
 
