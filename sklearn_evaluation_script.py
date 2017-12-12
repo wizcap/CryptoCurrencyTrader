@@ -67,7 +67,7 @@ def randomise_dictionary_inputs(strategy_dictionary_local):
     strategy_dictionary_local['ml_mode'] = choice([
         'svm',
         'randomforest',
-        #'adaboost',
+        'adaboost',
         'gradientboosting',
         'extratreesfitting'
     ])
@@ -80,7 +80,7 @@ def randomise_time_inputs(strategy_dictionary_local):
 
     """ generate time parameters for next step of random search """
 
-    window = 1000
+    window = 3000
 
     strategy_dictionary_local['windows'] = randint(1, window / 10)
 
@@ -114,6 +114,7 @@ def fit_time_scale(strategy_dictionary_input, search_iterations_local, time_iter
                 toc)
 
         if test_profit > optimum_profit:
+            optimum_profit = test_profit
             strategy_dictionary_optimum = strategy_dictionary_local
             fitting_dictionary_optimum = fitting_dictionary_local
 
@@ -131,7 +132,10 @@ def fit_time_scale(strategy_dictionary_input, search_iterations_local, time_iter
         toc,
         momentum_dict=simple_momentum_comparison(data_local, strategy_dictionary_optimum, fitting_dictionary_optimum))
 
-    return strategy_dictionary_optimum
+    return strategy_dictionary_optimum,\
+        fitting_inputs_local,\
+        fitting_targets_local,\
+        data_local
 
 
 if __name__ == '__main__':
@@ -148,7 +152,7 @@ if __name__ == '__main__':
         'output_flag': True,
         'plot_flag': False,
         'plot_last': True,
-        'ml_iterations': 10,
+        'ml_iterations': 15,
         'target_score': 'n_steps',
         'web_flag': True,
         'filename1': "USDT_BTC.csv",
@@ -156,8 +160,8 @@ if __name__ == '__main__':
         'momentum_compare': True,
     }
 
-    search_iterations = 10
-    time_iterations = 10
+    search_iterations = 15
+    time_iterations = 30
 
     strategy_dictionary, fitting_inputs, fitting_targets, data_to_predict = fit_time_scale(
         strategy_dictionary,
@@ -168,5 +172,3 @@ if __name__ == '__main__':
     offsets = np.linspace(0, 300, 5)
 
     offset_scan_validation(strategy_dictionary, data_to_predict, fitting_inputs, fitting_targets, offsets)
-
-    print strategy_dictionary

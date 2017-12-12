@@ -151,7 +151,7 @@ def offset_scan_validation(strategy_dictionary, data_to_predict, fitting_inputs,
 
     for offset in offsets:
         strategy_dictionary['offset'] = offset
-        fitting_dictionary,  profit_fraction = fit_strategy(
+        fitting_dictionary,  profit_fraction, _ = fit_strategy(
             strategy_dictionary, data_to_predict, fitting_inputs, fitting_targets)
         total_error += fitting_dictionary['error'] / len(offsets)
         total_profit += profit_fraction
