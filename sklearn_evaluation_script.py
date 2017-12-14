@@ -46,11 +46,15 @@ def random_search(strategy_dictionary_local, n_iterations, toc):
             strategy_dictionary_optimum = strategy_dictionary_local
             fitting_dictionary_optimum = fitting_dictionary
 
-    profit, test_profit = output_strategy_results(
-        strategy_dictionary_optimum,
-        fitting_dictionary_optimum,
-        data_local,
-        toc)
+    if strategy_dictionary_optimum:
+        profit, test_profit = output_strategy_results(
+            strategy_dictionary_optimum,
+            fitting_dictionary_optimum,
+            data_local,
+            toc)
+
+    else:
+        test_profit = -2
 
     return strategy_dictionary_optimum,\
         fitting_dictionary_optimum,\
@@ -80,7 +84,7 @@ def randomise_time_inputs(strategy_dictionary_local):
 
     """ generate time parameters for next step of random search """
 
-    window = 3000
+    window = 1000
 
     strategy_dictionary_local['windows'] = randint(1, window / 10)
 
@@ -160,8 +164,8 @@ if __name__ == '__main__':
         'momentum_compare': True,
     }
 
-    search_iterations = 15
-    time_iterations = 30
+    search_iterations = 5
+    time_iterations = 5
 
     strategy_dictionary, fitting_inputs, fitting_targets, data_to_predict = fit_time_scale(
         strategy_dictionary,
