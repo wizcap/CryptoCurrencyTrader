@@ -29,22 +29,22 @@ def random_search(strategy_dictionary_local, n_iterations, toc):
         elif strategy_dictionary_local['regression_mode'] == 'regression':
             fitting_targets_local = continuous_targets
 
-        fitting_inputs_local, strategy_dictionary = preprocessing_inputs(
+        fitting_inputs_local, strategy_dictionary_local = preprocessing_inputs(
             strategy_dictionary_local,
             fitting_inputs_local)
 
-        fitting_dictionary, profit_factor, strategy_dictionary_local = fit_strategy(
-            strategy_dictionary,
+        fitting_dictionary_local, _, _, strategy_dictionary_local = fit_strategy(
+            strategy_dictionary_local,
             data_local,
             fitting_inputs_local,
             fitting_targets_local)
 
-        error_loop = fitting_dictionary['error']
+        error_loop = fitting_dictionary_local['error']
 
-        if error_loop < error and fitting_dictionary['n_trades'] != 0:
+        if error_loop < error and fitting_dictionary_local['n_trades'] != 0:
             error = error_loop
             strategy_dictionary_optimum = strategy_dictionary_local
-            fitting_dictionary_optimum = fitting_dictionary
+            fitting_dictionary_optimum = fitting_dictionary_local
 
     if strategy_dictionary_optimum:
         profit, test_profit = output_strategy_results(
@@ -84,7 +84,7 @@ def randomise_time_inputs(strategy_dictionary_local):
 
     """ generate time parameters for next step of random search """
 
-    window = 1000
+    window = strategy_dictionary['n_days'] * 100 * 0.9
 
     strategy_dictionary_local['windows'] = randint(1, window / 10)
 
@@ -93,11 +93,10 @@ def randomise_time_inputs(strategy_dictionary_local):
     return strategy_dictionary_local
 
 
-def fit_time_scale(strategy_dictionary_input, search_iterations_local, time_iterations):
+def fit_time_scale(strategy_dictionary_input, search_iterations_local, time_iterations, toc):
 
     """ fit timescale variables"""
 
-    toc = tic()
     counter = 0
     strategy_dictionary_optimum = []
     optimum_profit = -2
@@ -124,33 +123,24 @@ def fit_time_scale(strategy_dictionary_input, search_iterations_local, time_iter
 
         counter += 1
 
-    underlined_output('Best strategy fit')
-
-    if strategy_dictionary['plot_last']:
-        strategy_dictionary['plot_flag'] = True
-
-    output_strategy_results(
-        strategy_dictionary_optimum,
-        fitting_dictionary_optimum,
-        data_local,
-        toc,
-        momentum_dict=simple_momentum_comparison(data_local, strategy_dictionary_optimum, fitting_dictionary_optimum))
-
     return strategy_dictionary_optimum,\
+        fitting_dictionary_optimum,\
         fitting_inputs_local,\
         fitting_targets_local,\
         data_local
 
 
 if __name__ == '__main__':
+    toc = tic()
+
     strategy_dictionary = {
-        'trading_currencies': ['USDT', 'BTC'],
-        'ticker_1': 'USDT_BTC',
-        'scraper_currency_1': 'BTC',
+        'trading_currencies': ['XMR', 'DASH'],
+        'ticker_1': 'XMR_DASH',
+        'scraper_currency_1': 'DASH',
         'candle_size': 300,
-        'n_days': 10,
+        'n_days': 50,
         'offset': 0,
-        'bid_ask_spread': 0.0007,
+        'bid_ask_spread': 0.003,
         'transaction_fee': 0.0025,
         'train_test_validation_ratios': [0.5, 0.2, 0.3],
         'output_flag': True,
@@ -162,15 +152,39 @@ if __name__ == '__main__':
         'filename1': "USDT_BTC.csv",
         'regression_mode': 'regression',
         'momentum_compare': True,
+        'fit_time': False,
+        'target_step': 200,
+        'windows' : 20,
     }
 
-    search_iterations = 5
-    time_iterations = 5
+    search_iterations = 15
+    time_iterations = 10
 
-    strategy_dictionary, fitting_inputs, fitting_targets, data_to_predict = fit_time_scale(
+    if strategy_dictionary['fit_time']:
+        strategy_dictionary, fitting_dictionary, fitting_inputs, fitting_targets, data_to_predict = fit_time_scale(
+            strategy_dictionary,
+            search_iterations,
+            time_iterations,
+            toc)
+
+    else:
+        strategy_dictionary, fitting_dictionary, fitting_inputs, fitting_targets, data_to_predict, test_profit \
+            = random_search(
+            strategy_dictionary,
+            search_iterations,
+            toc)
+
+    underlined_output('Best strategy fit')
+
+    if strategy_dictionary['plot_last']:
+        strategy_dictionary['plot_flag'] = True
+
+    output_strategy_results(
         strategy_dictionary,
-        search_iterations,
-        time_iterations)
+        fitting_dictionary,
+        data_to_predict,
+        toc,
+        momentum_dict=simple_momentum_comparison(data_to_predict, strategy_dictionary, fitting_dictionary))
 
     underlined_output('Offset validation')
     offsets = np.linspace(0, 300, 5)

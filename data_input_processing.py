@@ -135,6 +135,9 @@ class Data:
         self.fractional_volatility = fractional_change(self.absolute_volatility)
 
     def calculate_fractional_volume(self):
+
+        " calculate fractional volume change"
+
         self.fractional_volume = fractional_change(self.volume)
 
     def calculate_indicators(self, strategy_dictionary, prior_data_obj=None, non_price_data=False):
@@ -233,9 +236,8 @@ class TradingTargets:
 
     def ideal_strategy_score(self, strategy_dictionary):
 
-        """score based on max or min value before next trend change greater than fees"""
+        """score based on max or min value before next trend change"""
 
-        effective_fee_factor = effective_fee(strategy_dictionary)
         fractional_close_length = len(self.fractional_close)
 
         self.strategy_score = np.ones(fractional_close_length)
@@ -243,37 +245,34 @@ class TradingTargets:
         for index in range(fractional_close_length):
             while_counter = 0
             net_change = 1.0
-            down_index = fractional_close_length
-            draw_down = 1
-            while (net_change * effective_fee_factor < 1) & (index + while_counter < fractional_close_length):
+            last_change = 1
+            while index + while_counter < fractional_close_length:
                 net_change *= self.fractional_close[index + while_counter]
+
+                if net_change < 1:
+
+                    if net_change < last_change:
+                        score = net_change
+
+                    if last_change > 1:
+                        self.strategy_score[while_counter] = score
+                        break
+
+                elif net_change > 1:
+
+                    if net_change > last_change:
+                        score = net_change
+
+                    if last_change < 1:
+                        self.strategy_score[while_counter] = score
+                        break
+
+                last_change = net_change
                 while_counter += 1
 
-                if draw_down > net_change:
-                    draw_down = net_change
-                    down_index = while_counter
+        self.normalise_with_std(strategy_dictionary['windows'])
 
-            if net_change * effective_fee_factor > 1:
-                self.strategy_score[index] = draw_down
-            elif index + while_counter == fractional_close_length:
-                self.strategy_score[index:] = 1
-
-            while_counter = 0
-            net_change = 1.0
-            upside = 1
-            up_index = fractional_close_length
-            while (net_change > effective_fee_factor) & (index + while_counter < fractional_close_length):
-                net_change *= self.fractional_close[index + while_counter]
-                while_counter += 1
-
-                if upside < net_change:
-                    upside = net_change
-                    up_index = while_counter
-
-            if (net_change < effective_fee_factor) and up_index < down_index:
-                self.strategy_score[index] = upside
-            elif index + while_counter == fractional_close_length:
-                self.strategy_score[index:] = 1
+        self.strategy_score[np.isnan(self.strategy_score)] = 0
 
     def n_steps_ahead_score(self, n_steps):
 
@@ -291,6 +290,12 @@ class TradingTargets:
 
         self.strategy_score[np.isnan(self.strategy_score)] = 1
 
+        self.normalise_with_std(n_steps)
+
+    def normalise_with_std(self, window):
+
+        self.strategy_score\
+            = self.strategy_score / np.sqrt(exponential_moving_average(self.strategy_score ** 2, window))
 
     def convert_score_to_classification_target(self):
 
@@ -310,6 +315,9 @@ def effective_fee(strategy_dictionary):
 
 
 def trim_candle(candle, index):
+
+    """from candle from candlestick data"""
+
     np.delete(candle.date, index)
     np.delete(candle.open, index)
     np.delete(candle.close, index)

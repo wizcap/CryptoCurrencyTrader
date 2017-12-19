@@ -86,7 +86,6 @@ def fit_trade_threshold(strategy_score, fractional_price, strategy_dictionary):
         low_threshold_range = threshold_range[threshold_range < up_threshold]
 
         for low_threshold in low_threshold_range:
-
             profit_vector, n_trades, _, _, _ = strategy_profit(
                 strategy_score,
                 fractional_price,
@@ -234,8 +233,19 @@ def simple_momentum_comparison(data_obj, strategy_dictionary, fitting_dictionary
 
     """implement simple momentum strategy for comparison to machine learning"""
 
+    validation_indices = fitting_dictionary['validation_indices']
+    try:
+        validation_indices.remove(len(data_obj.fractional_close))
+
+    except:
+        pass
+
+    validation_indices\
+        = [v for v in validation_indices if v < min(len(data_obj.fractional_close), len(data_obj.mom_strategy))]
+    print len(data_obj.fractional_close)
+
     test_data = data_obj.fractional_close[fitting_dictionary['test_indices']]
-    val_data = data_obj.fractional_close[fitting_dictionary['validation_indices']]
+    val_data = data_obj.fractional_close[validation_indices]
 
     test_momentum = data_obj.mom_strategy[fitting_dictionary['test_indices']]
     val_momentum = data_obj.mom_strategy[fitting_dictionary['validation_indices']]

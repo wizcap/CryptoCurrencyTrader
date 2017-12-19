@@ -151,10 +151,13 @@ def offset_scan_validation(strategy_dictionary, data_to_predict, fitting_inputs,
 
     for offset in offsets:
         strategy_dictionary['offset'] = offset
-        fitting_dictionary,  profit_fraction, _ = fit_strategy(
-            strategy_dictionary, data_to_predict, fitting_inputs, fitting_targets)
+        fitting_dictionary,  profit_factor, test_profit_factor, _ = fit_strategy(
+            strategy_dictionary,
+            data_to_predict,
+            fitting_inputs,
+            fitting_targets)
         total_error += fitting_dictionary['error'] / len(offsets)
-        total_profit += profit_fraction
+        total_profit += profit_factor
 
     underlined_output('Averages: ')
     print 'Total profit: ', total_profit
@@ -207,9 +210,13 @@ def fit_strategy(strategy_dictionary, data_to_predict, fitting_inputs, fitting_t
         fitting_dictionary,
         data_to_predict)
 
-    profit_factor = output_strategy_results(strategy_dictionary, fitting_dictionary, data_to_predict, toc)
+    profit_factor, test_profit_factor = output_strategy_results(
+        strategy_dictionary,
+        fitting_dictionary,
+        data_to_predict,
+        toc)
 
-    return fitting_dictionary, profit_factor, strategy_dictionary
+    return fitting_dictionary, profit_factor, test_profit_factor, strategy_dictionary
 
 
 def fit_tensorflow(strategy_dictionary, data_to_predict, fitting_inputs, fitting_targets):
