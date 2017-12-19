@@ -10,9 +10,9 @@ From a machine learning perspective the project has been a success, if exchange 
 
 ![Alt text](no_fees_fitting_example.png?raw=true "Optional Title") 
 
-These results show profit at multiple time offsets using the same fitting heuristic indicating that the system is not overfitting.
+These results show profit at multiple time offsets using the same fitting heuristic indicating that the system is not overfitting. You can also see from the above plot that machine learning is able to outperform a simple momentum strategy on the same time scale.
 
-###Future
+### Future
 I am continuing to improve the model, to produce a system which is profitable after fees without overfitting.
 I am planning and beginning to implement a deep reinforcement learning system to overhaul the tensorflow component. I will also be using an existing unsupervised hidden markov model as an input to both the tensorflow and sklearn system.
 
@@ -37,15 +37,8 @@ An ideal trading strategy is generated based on past data, every candlestick is 
 The machine learning optimisation is based on a random search as outlined in the diagram below, with a bayesian optimization based hyperparameter fitting for each algorithm. The meta-fitting selects a machine learning and preprocessing pair, the selected machine learning model is then optimised using a second random grid search to fit the hyperparameters for that particular machine learning model. (Without GPU support the tensorflow fitting may take a long time!)
 ![Alt text](ML_Flowchart.png?raw=true "Optional Title")
 
-## Example results
-With none of the different automated machine learning optimisation strategies was I able to get a set of fitting parameters which was consistently profitable at multiple offsets. Some of the offsets would be profitable an example is included below.
-![Alt text](Fitting_example.png?raw=true "Optional Title")
-
 ## Validation
 In order to estimate the amount of overfitting, a series of offset hyperparameter fittings are performed. If the trading strategy is not overfit, fitting should be approximately consistent across at all offsets in terms of profit fraction and fitting error.
-
-## To Do
-Due to reducing the number of data inputs and allowing a the strategy to continuously change the amount of currency in position, as opposed to simply being in or out, performance is a lot more stable although still not profitable compared to buy and hold (particularly with the excellent performance of bitcoin recently.)
 
 #Setup
 To run as a standalone script add a file named API_settings.py containing your poloniex API, google and reddit API login:
