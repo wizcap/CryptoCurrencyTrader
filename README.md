@@ -5,6 +5,18 @@ The script is inspired by both the pytrader project https://github.com/owocki/py
 # Disclaimer
 The information in this repository is provided for information purposes only. The Information is not intended to be and does not constitute financial advice or any other advice, is general in nature and not specific to you.
 
+## Project Status
+From a machine learning perspective the project has been a success, if exchange fees are ignored it is able to profitably predict price movements, with the sklearn evaluation script. An example trading over approximately a week after training and testing on 43 days of data for XMR-DASH is shown below.
+
+![Alt text](no_fees_fitting_example.png?raw=true "Optional Title") 
+
+These results show profit at multiple time offsets using the same fitting heuristic indicating that the system is not overfitting.
+
+###Future
+I am continuing to improve the model, to produce a system which is profitable after fees without overfitting.
+I am planning and beginning to implement a deep reinforcement learning system to overhaul the tensorflow component. I will also be using an existing unsupervised hidden markov model as an input to both the tensorflow and sklearn system.
+
+
 ## Input Data
 Minor changes were made to the Poloniex API python wrapper which is inluded in the repository https://github.com/s4w3d0ff/python-poloniex. Data is retrieved via the Poloniex API in OHLC (open, high, low, close) candlestick format along with volume data.
 A series of non price data are also provided, google trends data are pulled using the pytrends psuedo API and the web scraping and reddit and bitcointalk forum data is supplied using the natural language processing sentiment analysis package from here https://github.com/llens/CryptocurrencyWebScrapingAndSentimentAnalysis.
