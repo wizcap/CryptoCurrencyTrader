@@ -6,11 +6,10 @@ from data_input_processing import preprocessing_inputs
 from strategy_evaluation import output_strategy_results, simple_momentum_comparison
 
 
-def random_search(strategy_dictionary_local, n_iterations, toc):
+def random_search(strategy_dictionary_local, n_iterations, data_local, toc):
 
     """random search to find optimum machine learning algorithm and preprocessing"""
 
-    data_local = import_data(strategy_dictionary_local)
     fitting_inputs_local, continuous_targets, classification_targets = input_processing(
         data_local,
         strategy_dictionary_local)
@@ -47,21 +46,21 @@ def random_search(strategy_dictionary_local, n_iterations, toc):
             fitting_dictionary_optimum = fitting_dictionary_local
 
     if strategy_dictionary_optimum:
-        profit, test_profit = output_strategy_results(
+        profit, val_profit = output_strategy_results(
             strategy_dictionary_optimum,
             fitting_dictionary_optimum,
             data_local,
             toc)
 
     else:
-        test_profit = -2
+        val_profit = -2
 
     return strategy_dictionary_optimum,\
         fitting_dictionary_optimum,\
         fitting_inputs_local,\
         fitting_targets_local,\
         data_local,\
-        test_profit
+        val_profit
 
 
 def randomise_dictionary_inputs(strategy_dictionary_local):
@@ -93,7 +92,7 @@ def randomise_time_inputs(strategy_dictionary_local):
     return strategy_dictionary_local
 
 
-def fit_time_scale(strategy_dictionary_input, search_iterations_local, time_iterations, toc):
+def fit_time_scale(strategy_dictionary_input, search_iterations_local, time_iterations, date, toc):
 
     """ fit timescale variables"""
 
@@ -114,6 +113,7 @@ def fit_time_scale(strategy_dictionary_input, search_iterations_local, time_iter
             = random_search(
                 strategy_dictionary_input,
                 search_iterations_local,
+                date,
                 toc)
 
         if test_profit > optimum_profit:
@@ -138,33 +138,37 @@ if __name__ == '__main__':
         'ticker_1': 'XMR_DASH',
         'scraper_currency_1': 'DASH',
         'candle_size': 300,
-        'n_days': 50,
+        'n_days': 10,
         'offset': 0,
         'bid_ask_spread': 0.003,
-        'transaction_fee': 0.0025,
-        'train_test_validation_ratios': [0.5, 0.2, 0.3],
+        'transaction_fee': 0.0015,
+        'train_validation_test_ratios': [0.5, 0.2, 0.3],
         'output_flag': True,
         'plot_flag': False,
         'plot_last': True,
-        'ml_iterations': 15,
+        'ml_iterations': 10,
         'target_score': 'n_steps',
-        'web_flag': True,
-        'filename1': "USDT_BTC.csv",
+        'web_flag': False,
+        'filename1': "XMR_DASH.csv",
         'regression_mode': 'regression',
         'momentum_compare': True,
         'fit_time': False,
         'target_step': 200,
-        'windows' : 20,
+        'windows': 20,
+        'stop_loss': 0.07
     }
 
-    search_iterations = 15
-    time_iterations = 10
+    data = import_data(strategy_dictionary)
+
+    search_iterations = 5
+    time_iterations = 20
 
     if strategy_dictionary['fit_time']:
         strategy_dictionary, fitting_dictionary, fitting_inputs, fitting_targets, data_to_predict = fit_time_scale(
             strategy_dictionary,
             search_iterations,
             time_iterations,
+            data,
             toc)
 
     else:
@@ -172,6 +176,7 @@ if __name__ == '__main__':
             = random_search(
             strategy_dictionary,
             search_iterations,
+            data,
             toc)
 
     underlined_output('Best strategy fit')

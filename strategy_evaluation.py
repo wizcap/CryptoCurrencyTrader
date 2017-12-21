@@ -1,5 +1,6 @@
 import numpy as np
 from matplotlib import pyplot as plt
+from sklearn.preprocessing import minmax_scale
 
 
 def strategy_profit(strategy_score, fractional_price, strategy_dictionary, low_threshold, up_threshold):
@@ -10,9 +11,11 @@ def strategy_profit(strategy_score, fractional_price, strategy_dictionary, low_t
     portfolio_value = np.ones(buy_sell_length)
     cash_value = np.zeros(buy_sell_length)
     crypto_value = np.zeros(buy_sell_length)
-    effective_fee_factor = (strategy_dictionary['transaction_fee'] + strategy_dictionary['bid_ask_spread'])
+    effective_fee_factor = (strategy_dictionary['transaction_fee'] + 0.5 * strategy_dictionary['bid_ask_spread'])
 
     n_trades = 0
+    curr_val = 1
+    stop_val = 1
 
     strategy_score = normalise_and_centre_score(strategy_score, up_threshold, low_threshold)
 
@@ -24,9 +27,17 @@ def strategy_profit(strategy_score, fractional_price, strategy_dictionary, low_t
         cash_value[index] = cash_value[index - 1]
         portfolio_value[index] = crypto_value[index] + cash_value[index]
 
+        curr_val *= fractional_price[index - 1]
+
         score_step = (strategy_score[index] - strategy_score[index - 1])
 
         score_step = portfolio_value[index] * score_step
+
+        #Stoploss
+        stop_val = max(stop_val, curr_val)
+
+        if (stop_val - curr_val) / stop_val < strategy_dictionary['stop_loss']:
+            strategy_score[index] = 0
 
         if score_step > 0:
 
@@ -61,11 +72,12 @@ def normalise_and_centre_score(strategy_score, up_threshold, low_threshold):
 
     """normalise and centre score when fitting thresholds"""
 
-    temp_score = strategy_score
+    temp_score = minmax_scale(strategy_score)
+
+    temp_score = temp_score - 0.5
     temp_score[temp_score > up_threshold] = up_threshold
     temp_score[temp_score < -up_threshold] = -up_threshold
     temp_score[abs(temp_score) < low_threshold] = 0
-    temp_score = temp_score / (2 * up_threshold)
     temp_score = temp_score + 0.5
 
     return temp_score
@@ -75,7 +87,7 @@ def fit_trade_threshold(strategy_score, fractional_price, strategy_dictionary):
 
     """ fit minimum signal change to execute trade """
 
-    threshold_range = np.linspace(0, 1, 30)# np.logspace(-3, 2, 100)
+    threshold_range = np.linspace(0, 1, 30)
 
     best_profit = -1
     best_up_threshold = 0
@@ -110,30 +122,30 @@ def post_process_training_results(strategy_dictionary, fitting_dictionary, data)
     """return fitting dictionary containing training parameters"""
 
     strategy_dictionary = fit_trade_threshold(
-        fitting_dictionary['fitted_strategy_score'],
-        data.fractional_close[fitting_dictionary['test_indices']],
+        fitting_dictionary['validation_strategy_score'],
+        data.fractional_close[fitting_dictionary['validation_indices']],
         strategy_dictionary)
 
     fitting_dictionary['portfolio_value'],\
         fitting_dictionary['n_trades'],\
         cash_value,\
         crypto_value,\
-        fitting_dictionary['validation_strategy_score']\
+        fitting_dictionary['test_strategy_score']\
         = strategy_profit(
-        fitting_dictionary['validation_strategy_score'],
-        data.fractional_close[fitting_dictionary['validation_indices']],
+        fitting_dictionary['test_strategy_score'],
+        data.fractional_close[fitting_dictionary['test_indices']],
         strategy_dictionary,
         strategy_dictionary['low_threshold'],
         strategy_dictionary['up_threshold'])
 
-    fitting_dictionary['test_portfolio_value'],\
-        fitting_dictionary['test_trades'],\
+    fitting_dictionary['validation_portfolio_value'],\
+        fitting_dictionary['validation_trades'],\
         _,\
         _,\
-        fitting_dictionary['fitted_strategy_score']\
+        fitting_dictionary['validation_strategy_score']\
         = strategy_profit(
-        fitting_dictionary['fitted_strategy_score'],
-        data.fractional_close[fitting_dictionary['test_indices']],
+        fitting_dictionary['validation_strategy_score'],
+        data.fractional_close[fitting_dictionary['validation_indices']],
         strategy_dictionary,
         strategy_dictionary['low_threshold'],
         strategy_dictionary['up_threshold'])
@@ -171,16 +183,16 @@ def output_strategy_results(strategy_dictionary, fitting_dictionary, data_to_pre
 
     """print or plot results of machine learning fitting"""
 
-    prediction_data = data_to_predict.close[fitting_dictionary['validation_indices']]
-    test_data = data_to_predict.close[fitting_dictionary['test_indices']]
+    val_data = data_to_predict.close[fitting_dictionary['validation_indices']]
+    prediction_data = data_to_predict.close[fitting_dictionary['test_indices']]
 
     profit = profit_factor(
             fitting_dictionary['portfolio_value'],
             prediction_data)
 
-    test_profit = profit_factor(
-            fitting_dictionary['test_portfolio_value'],
-            test_data)
+    val_profit = profit_factor(
+            fitting_dictionary['validation_portfolio_value'],
+            val_data)
 
     if strategy_dictionary['output_flag']:
         print "Fitting time: ", toc()
@@ -226,7 +238,7 @@ def output_strategy_results(strategy_dictionary, fitting_dictionary, data_to_pre
 
         plt.show()
     
-    return profit, test_profit
+    return profit, val_profit
 
 
 def simple_momentum_comparison(data_obj, strategy_dictionary, fitting_dictionary):

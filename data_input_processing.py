@@ -3,6 +3,7 @@ import pandas as pd
 import logging
 from sklearn.preprocessing import Imputer, scale
 from sklearn.decomposition import PCA, FastICA
+from hmmlearn import hmm
 from poloniex_API import poloniex
 from API_settings import poloniex_API_secret, poloniex_API_key
 from non_price_data import google_trends_interest_over_time, initialise_google_session, hash_rate
@@ -57,6 +58,7 @@ class Data:
         self.classification_score = []
         self.momentum = []
         self.mom_strategy = []
+        self.hidden_markov = []
 
         if web_flag:
             self.candle_input_web(currency_pair, start, end, period)
@@ -159,6 +161,8 @@ class Data:
             10 * strategy_dictionary['windows']))
 
         self.momentum_strategy()
+
+        self.hidden_markov = hidden_markov_model(self.close[:-1])
 
         if non_price_data:
             self.non_price_data(strategy_dictionary, prior_data_obj=prior_data_obj)
@@ -377,6 +381,7 @@ def generate_training_variables(data_obj, strategy_dictionary, prior_data_obj=No
     fitting_inputs = np.vstack((
         data_obj.momentum,
         data_obj.exponential_moving_volatility_1,
+        data_obj.hidden_markov,
         #data_obj.kalman_signal,
         # data_obj.close[:-1],
         #data_obj.open[:-2],
@@ -457,17 +462,20 @@ def train_test_indices(input_data, train_factor):
 
 def train_test_validation_indices(input_data, ratios):
     train_factor = ratios[0]
-    test_factor = ratios[1]
+    val_factor = ratios[1]
     data_length = len(input_data)
     train_indices_local = range(0, int(data_length * train_factor))
-    test_indices_local = range(train_indices_local[-1] + 1, int(data_length * (train_factor + test_factor)))
+    validation_indices_local = range(train_indices_local[-1] + 1, int(data_length * (train_factor + val_factor)))
 
-    validation_indices_local = range(test_indices_local[-1] + 1, data_length)
+    test_indices_local = range(validation_indices_local[-1] + 1, data_length)
 
     return train_indices_local, test_indices_local, validation_indices_local
 
 
 def kalman_filter(input_price):
+
+    """kalman filter to be used as training input if required"""
+
     n_iter = len(input_price)
     vector_size = (n_iter,)
 
@@ -497,3 +505,17 @@ def kalman_filter(input_price):
 
 def sort_arrays_by_first(y_input, x_input):
     return [x for (y, x) in sorted(zip(y_input, x_input))], [y for (y, x) in sorted(zip(y_input, x_input))]
+
+
+def hidden_markov_model(X):
+
+    """fit hidden markov model """
+
+    X = X.reshape(-1, 1)
+
+    remodel = hmm.GaussianHMM(n_components=3, covariance_type="full", n_iter=100)
+    remodel.fit(X)
+    return remodel.predict(X)
+
+
+
