@@ -8,7 +8,7 @@ The information in this repository is provided for information purposes only. Th
 ## Project Status
 The project is still a work in progress, I found a bug in the iteration of the project that was indicating profitability when it wasn't present. I am now getting stable if unprofitable performance.
 
-![Alt text](strategy_score.png?raw=true "Optional Title") 
+![Alt text](strategyscore.png?raw=true "Optional Title") 
 
 The results show profitability in some situations and not others, I believe this is a result of overfitting combined with an uncertain detection of market regime. I detect this overfitting by running the same fitting heuristic with paramteters profitable at one time at other offset times, I am yet to arrive at a consistently profitable incarnation.
 
