@@ -6,15 +6,15 @@ The script is inspired by both the pytrader project https://github.com/owocki/py
 The information in this repository is provided for information purposes only. The Information is not intended to be and does not constitute financial advice or any other advice, is general in nature and not specific to you.
 
 ## Project Status
-From a machine learning perspective the project has been a success, if exchange fees are ignored it is able to profitably predict price movements, with the sklearn evaluation script. An example trading over approximately a week after training and testing on 43 days of data for XMR-DASH is shown below.
+The project is still a work in progress, I found a bug in the iteration of the project that was indicating profitability when it wasn't present. I am now getting stable if unprofitable performance.
 
-![Alt text](no_fees_fitting_example.png?raw=true "Optional Title") 
+![Alt text](strategy_score.png?raw=true "Optional Title") 
 
-These results show profit at multiple time offsets using the same fitting heuristic indicating that the system is not overfitting. You can also see from the above plot that machine learning is able to outperform a simple momentum strategy on the same time scale.
+The results show profitability in some situations and not others, I believe this is a result of overfitting combined with an uncertain detection of market regime. I detect this overfitting by running the same fitting heuristic with paramteters profitable at one time at other offset times, I am yet to arrive at a consistently profitable incarnation.
 
 ### Future
 I am continuing to improve the model, to produce a system which is profitable after fees without overfitting.
-I am planning and beginning to implement a deep reinforcement learning system to overhaul the tensorflow component. I will also be using an existing unsupervised hidden markov model as an input to both the tensorflow and sklearn system.
+I am planning and beginning to implement a deep reinforcement learning system to overhaul the tensorflow component.
 
 
 ## Input Data
@@ -26,12 +26,6 @@ Alternatively price and volume data can be supplied in the form of .csv files by
 
 ### Technical Indicators - Training Inputs
 A series of technical indicators are calculated and provided as inputs to the machine learning optimisation, exponential moving averages, exponential moving volatilities and exponential moving volumes over a series of windows. A kalman filter is also provided as an input.
-
-
-### Training Targets - Strategy Score
-An ideal trading strategy is generated based on past data, every candlestick is given a score which represent the potential profit or loss before the next price reversal exceeding the combined transaction fee and bid ask spread. This minimum price reversal is represented by Δp in the diagram below.
-![Alt text](strategyscore.jpg?raw=true "Optional Title")
-
 
 ## Machine Learning Meta-fitting and Hyper Parameter Optimisation
 The machine learning optimisation is based on a random search as outlined in the diagram below, with a bayesian optimization based hyperparameter fitting for each algorithm. The meta-fitting selects a machine learning and preprocessing pair, the selected machine learning model is then optimised using a second random grid search to fit the hyperparameters for that particular machine learning model. (Without GPU support the tensorflow fitting may take a long time!)
