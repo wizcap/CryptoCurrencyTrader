@@ -57,7 +57,7 @@ if __name__ == '__main__':
         'plot_last': True,
         'target_score': 'n_steps',
         'target_step': 200,
-        'windows': [100,],
+        'windows': 100,
         'regression_mode': 'regression',
         'preprocessing': 'None',
         'ml_mode': 'tensorflow',
