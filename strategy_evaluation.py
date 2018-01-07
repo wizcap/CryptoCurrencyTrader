@@ -211,7 +211,8 @@ def output_strategy_results(strategy_dictionary, fitting_dictionary, data_to_pre
 
     if strategy_dictionary['output_flag']:
         print "Fitting time: ", toc()
-
+        
+        print "Raw profit", fitting_dictionary['portfolio_value'][-1]
         print "Fractional profit compared to buy and hold: ", profit
         print "Mean squared error: ", fitting_dictionary['error']
         print "Window: ", strategy_dictionary['windows']
