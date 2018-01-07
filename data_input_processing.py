@@ -6,9 +6,6 @@ from sklearn.decomposition import PCA, FastICA
 from hmmlearn import hmm
 from poloniex_API import poloniex
 from API_settings import poloniex_API_secret, poloniex_API_key
-from non_price_data import google_trends_interest_over_time, initialise_google_session, hash_rate
-from CryptocurrencyWebScrapingAndSentimentAnalysis.web_scraper import scrape_subreddits, scrape_forums
-from CryptocurrencyWebScrapingAndSentimentAnalysis.sentiment_analysis import analyse_sentiments
 SEC_IN_DAY = 86400
 
 SYMBOL_DICTIONARY = {
@@ -142,7 +139,7 @@ class Data:
 
         self.fractional_volume = fractional_change(self.volume)
 
-    def calculate_indicators(self, strategy_dictionary, prior_data_obj=None, non_price_data=False):
+    def calculate_indicators(self, strategy_dictionary):
 
         """calculate indicators for training machine learning algorithm"""
 
@@ -163,63 +160,6 @@ class Data:
         self.momentum_strategy()
 
         self.hidden_markov = hidden_markov_model(self.close[:-1])
-
-        if non_price_data:
-            self.non_price_data(strategy_dictionary, prior_data_obj=prior_data_obj)
-
-    def non_price_data(self, strategy_dictionary, prior_data_obj=None):
-        self.hash_rate_data()
-        self.google_trend_data(strategy_dictionary)
-        self.web_scraping_sentiment_analysis(strategy_dictionary, prior_data_obj=prior_data_obj)
-
-    def hash_rate_data(self):
-        hash_rates, dates = hash_rate()
-        self.hash_rates = fractional_change(np.interp(self.date, dates, hash_rates))
-
-    def google_trend_data(self, strategy_dictionary):
-        pytrend = initialise_google_session()
-        search_terms = strategy_dictionary['trading_currencies']
-
-        if 'USDT' in search_terms:
-            del search_terms[search_terms == 'USDT']
-
-        self.google_trend_score = np.zeros((len(self.date) - 1, len(search_terms)))
-
-        for i in range(len(search_terms)):
-            search_term = SYMBOL_DICTIONARY[search_terms[i]]
-            dates, interest = google_trends_interest_over_time(pytrend, [search_term, ])
-
-            self.google_trend_score[:, i] = fractional_change(np.interp(self.date, dates, interest))
-
-    def web_scraping_sentiment_analysis(self, strategy_dictionary, prior_data_obj=None):
-        subreddits = ["cryptocurrency", "cryptomarkets", "bitcoin", "bitcoinmarkets", "ethereum"]
-
-        forum_urls = ["https://bitcointalk.org/index.php?board=5.0", "https://bitcointalk.org/index.php?board=7.0",
-                      "https://bitcointalk.org/index.php?board=8.0"]
-        allowed_domains = ["bitcointalk.org", ]
-
-        if prior_data_obj is None:
-            dates, texts = scrape_subreddits(
-                subreddits, submission_limit=strategy_dictionary['scraper_page_limit'])
-            dates_temp, texts_temp = scrape_forums(
-                forum_urls, allowed_domains, max_pages=strategy_dictionary['scraper_page_limit'])
-
-            dates += dates_temp
-            texts += texts_temp
-
-            self.scraper_score_dates = dates
-            self.scraper_score_texts = texts
-        else:
-            dates = prior_data_obj.scraper_score_dates
-            texts = prior_data_obj.scraper_score_texts
-
-        dates, texts, sentiments = analyse_sentiments(dates, texts, SENTIMENT_KEYWORDS[self.scraper_currency])
-
-        sentiments, dates = sort_arrays_by_first(dates, sentiments)
-
-        self.web_sentiment_score = fractional_change(np.interp(self.date, dates, sentiments))
-
-        logging.getLogger().setLevel(logging.WARNING)
 
     def momentum_strategy(self):
 
@@ -470,37 +410,6 @@ def train_test_validation_indices(input_data, ratios):
     test_indices_local = range(validation_indices_local[-1] + 1, data_length)
 
     return train_indices_local, test_indices_local, validation_indices_local
-
-
-def kalman_filter(input_price):
-
-    """kalman filter to be used as training input if required"""
-
-    n_iter = len(input_price)
-    vector_size = (n_iter,)
-
-    q = 1E-5
-
-    post_estimate = np.zeros(vector_size)
-    p = np.zeros(vector_size)
-    post_estimate_minus = np.zeros(vector_size)
-    pminus = np.zeros(vector_size)
-    k_var = np.zeros(vector_size)
-
-    r = 0.1 ** 2
-
-    post_estimate[0] = input_price[0]
-    p[0] = 1.0
-
-    for k in range(1, n_iter):
-        post_estimate_minus[k] = post_estimate[k - 1]
-        pminus[k] = p[k - 1] + q
-
-        k_var[k] = pminus[k] / (pminus[k] + r)
-        post_estimate[k] = post_estimate_minus[k] + k_var[k] * (input_price[k] - post_estimate_minus[k])
-        p[k] = (1 - k_var[k]) * pminus[k]
-
-    return post_estimate
 
 
 def sort_arrays_by_first(y_input, x_input):

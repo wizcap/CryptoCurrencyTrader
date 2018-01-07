@@ -5,8 +5,10 @@ import time
 import hmac,hashlib
 import requests
 
+
 def createTimeStamp(datestr, format="%Y-%m-%d %H:%M:%S"):
     return time.mktime(time.strptime(datestr, format))
+
 
 class poloniex:
     def __init__(self, APIKey, Secret):
@@ -56,7 +58,6 @@ class poloniex:
             ret = requests.post('https://poloniex.com/tradingApi', data=req, headers=headers)
             jsonRet = json.loads(ret.text)
             return self.post_process(jsonRet)
-
 
     def returnTicker(self):
         return self.api_query("returnTicker")
