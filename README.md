@@ -6,6 +6,7 @@ The script is inspired by both the pytrader project https://github.com/owocki/py
 The information in this repository is provided for information purposes only. The Information is not intended to be and does not constitute financial advice or any other advice, is general in nature and not specific to you.
 
 ## Project Status
+POSSIBLE ERROR, TESTING CURRENTLY!
 I have implemented a working profitable portfolio manager using deep reinforcement learning with a convolutional neural network in Keras. I am planning to re-implement the auto-SKLearn style hyperparameter search.
 
 ![Alt text](fitting_example.png?raw=true "Optional Title") 
