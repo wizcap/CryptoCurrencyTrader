@@ -7,7 +7,7 @@ import numpy as np
 
 if __name__ == "__main__":
     TIME_LAG = 50
-    TIME_LENGTH = 1 * 365 * 24 * 60 * 60
+    TIME_LENGTH = 2 * 365 * 24 * 60 * 60
     OFFSET = 365 * 60 * 60
     current_time = time.time()
 
@@ -41,14 +41,16 @@ if __name__ == "__main__":
         #    [0.9, 0.05, 0.0001])
 
         train_indices = np.linspace(0, len(price_array_training)-100, len(price_array_training)-100, dtype=int)
-        test_indices = np.linspace(len(price_array_training) - 100, len(price_array_training) - 5, 95, dtype=int)
+        test_indices = np.linspace(len(price_array_training) - 100, len(price_array_training) - 75, 25, dtype=int)
         validation_indices = np.linspace(len(price_array_training) -5, len(price_array_training)-1, 5, dtype=int)
 
         fitting_dictionary = tensorflow_cnn_fitting(
             train_indices,
             test_indices,
             validation_indices,
-            price_array_training)
+            price_array_training,
+            price_array,
+            load_net='model.h5')
 
         portfolio_value, cum_log_return = calculate_portfolio_value(
             fitting_dictionary['fitted_strategy_score'],
@@ -65,5 +67,15 @@ if __name__ == "__main__":
         plt.plot(portfolio_value)
         plt.xlabel('Time (30 minute steps)')
         plt.ylabel('Fractional Portfolio Value')
+
+        plt.figure()
+        plt.plot(price_array)
+        plt.xlabel('Time (30 minute steps)')
+        plt.ylabel('Fractional Asset Prices')
+
+        plt.figure()
+        plt.plot(fitting_dictionary['fitted_strategy_score'])
+        plt.xlabel('Time (30 minute steps)')
+        plt.ylabel('Fractional Portfolio Allocation')
         plt.show()
 

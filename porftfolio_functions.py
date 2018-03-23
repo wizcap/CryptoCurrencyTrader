@@ -32,10 +32,12 @@ def build_price_arrays(data_object_list, time_lag=50):
     price_array_training\
         = np.ones((len(data_object_list[0].close) - time_lag, len(data_object_list), time_lag, 3))
 
+    price_array \
+        = np.ones((len(data_object_list[0].close) - time_lag, len(data_object_list)))
+
     for idx, data_object in enumerate(data_object_list):
 
         for time in range(time_lag):
-
             price_array_training[:, idx, time, 0] = data_object.close[time:-(time_lag - time)]\
                                                     / data_object.open[time:-(time_lag - time)]
             price_array_training[:, idx, time, 1] = data_object.low[time:-(time_lag - time)]\
@@ -43,26 +45,18 @@ def build_price_arrays(data_object_list, time_lag=50):
             price_array_training[:, idx, time, 2] = data_object.high[time:-(time_lag - time)]\
                                                     / data_object.open[time:-(time_lag - time)]
 
-    array_shape = price_array_training.shape
-
-    price_array_training = np.concatenate(
-        (price_array_training, np.ones((array_shape[0], 1, array_shape[2], array_shape[3]))), 1)
-
-    price_array = price_array_training[:, :, 0, 0]
+    price_array = price_array_training[1:, :, 0, 0]
+    price_array_training = price_array_training[:-1, :, :, :]
 
     return price_array, price_array_training
 
 
 def calculate_portfolio_value_backend(
         portfolio_array,
-        input_tensor,
+        price_array,
         transaction_fee=0.0025):
 
     """ Calculate the value of a portfolio for given prices and portfolio vectors """
-
-    # Assumes currencies can only be traded into dollars and back out.
-
-    price_array = input_tensor[:, :, 0, 0]
 
     portfolio_change = portfolio_array[1:, :] - portfolio_array[:-1, :]
 

@@ -12,6 +12,7 @@ def tensorflow_cnn_fitting(
         test_indices,
         validation_indices,
         input_data,
+        price_data,
         load_net=None,
         retrain=False):
 
@@ -27,18 +28,15 @@ def tensorflow_cnn_fitting(
 
     input1 = Input(shape=(input_size[1], input_size[2], input_size[3]))
 
-    dummy_target = np.ones((input_size[0], input_size[1]))
+    train_price = price_data[train_indices]
 
-    train_dummy = dummy_target[train_indices]
+    early_stopping = EarlyStopping(monitor='loss', patience=2000)
 
-    early_stopping = EarlyStopping(monitor='loss', patience=100)
-
-    dropout1 = input1
     conv1 = Conv2D(
         2,
         (1, 3),
         activation='relu',
-        kernel_regularizer=l2(1E-8))(dropout1)
+        kernel_regularizer=l2(1E-8))(input1)
     conv2 = Conv2D(
         1,
         (1, input_size[2] - 2),
@@ -52,7 +50,7 @@ def tensorflow_cnn_fitting(
     opt = Adam(lr=3E-5)
 
     model.compile(
-        loss=return_score_wrapper(input1, preds),
+        loss=custom_loss,
         optimizer=opt)
 
     model.summary()
@@ -64,10 +62,10 @@ def tensorflow_cnn_fitting(
         batch_size = 50
 
         model.fit_generator(
-            random_fit_generator(train_data, train_dummy, batch_size),
+            random_fit_generator(train_data, train_price, batch_size),
             steps_per_epoch=1000,
             validation_steps=150,
-            epochs=1000,
+            epochs=100,
             callbacks=[early_stopping])
 
         model.save('model.h5')
@@ -97,14 +95,13 @@ def random_fit_generator(data, labels, batch_size):
         yield data[slice_start:slice_start+batch_size, :, :, :], labels[slice_start:slice_start+batch_size]
 
 
-def return_score_wrapper(input_tensor, pred_tensor):
+def custom_loss(y_true, y_pred):
 
     """ Keras wrapper for loss function """
 
-    def custom_loss(y_true, y_pred):
-        _, cum_log_return = calculate_portfolio_value_backend(y_pred, input_tensor)
+    _, cum_log_return = calculate_portfolio_value_backend(y_pred, y_true)
 
-        return 1 - cum_log_return
-    return custom_loss
+    return 1 - cum_log_return
+
 
 
