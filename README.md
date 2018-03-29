@@ -6,12 +6,13 @@ The script is inspired by both the pytrader project https://github.com/owocki/py
 The information in this repository is provided for information purposes only. The Information is not intended to be and does not constitute financial advice or any other advice, is general in nature and not specific to you.
 
 ## Project Status
-I have implemented a working profitable portfolio manager using deep reinforcement learning with a convolutional neural network in Keras.
+I have implemented a working profitable portfolio manager using deep reinforcement learning with a convolutional neural network in Keras. The model learns slowly to ensure generalization and requires a total of > 5E6 training steps for initial training.
 
 I can achieve consistent profitability after fees with the current implementation of the current system, at a number of time offsets, indicating the system is not overfitting.
 ![Alt text](fitting_example1.png?raw=true "Optional Title")
 ![Alt text](fitting_example2.png?raw=true "Optional Title")
 ![Alt text](fitting_example3.png?raw=true "Optional Title")
+
 
 ## Input Data
 Minor changes were made to the Poloniex API python wrapper which is inluded in the repository https://github.com/s4w3d0ff/python-poloniex. Data is retrieved via the Poloniex API in OHLC (open, high, low, close) candlestick format along with volume data.
