@@ -49,8 +49,7 @@ if __name__ == "__main__":
             test_indices,
             validation_indices,
             price_array_training,
-            price_array,
-            load_net='model.h5')
+            price_array)
 
         portfolio_value, cum_log_return = calculate_portfolio_value(
             fitting_dictionary['fitted_strategy_score'],
