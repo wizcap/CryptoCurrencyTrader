@@ -69,7 +69,7 @@ if __name__ == "__main__":
         if idx == int(len(price_array) / 2):
 
             cnn_kwargs = {
-                'retrain': 1,
+                'retrain': 80,
             }
         else:
             cnn_kwargs = {
