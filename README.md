@@ -9,8 +9,8 @@ The information in this repository is provided for information purposes only. Th
 I have implemented a working profitable portfolio manager using deep reinforcement learning with a convolutional neural network in Keras. 
 
 I can achieve consistent profitability after fees with the current implementation of the current system, at a number of time offsets, indicating the system is not overfitting.
-![Alt text](Fitting_Example 1.png?raw=true "Optional Title")
-![Alt text](Fitting_Example 2.png?raw=true "Optional Title")
+![Alt text](FittingExample1.png?raw=true "Optional Title")
+![Alt text](FittingExample2.png?raw=true "Optional Title")
 
 
 ## Input Data
