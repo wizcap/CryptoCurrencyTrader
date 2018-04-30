@@ -1,8 +1,9 @@
 import numpy as np
 import pandas as pd
 
-from poloniex_API import poloniex
-from API_settings import poloniex_API_secret, poloniex_API_key
+import time
+from poloniex import Poloniex
+#from price_prediction.API_settings import poloniex_API_secret, poloniex_API_key
 SEC_IN_DAY = 86400
 
 
@@ -10,8 +11,15 @@ class Data:
 
     """ Class to retrieve poloniex candle data from API or file"""
 
-    def __init__(self, currency_pair, period, web_flag, start=None, end=None,
-                 offset=None, n_days=None, filename=None):
+    def __init__(
+            self,
+            currency_pair,
+            period, web_flag,
+            start=None,
+            end=None,
+            offset=None,
+            n_days=None,
+            filename=None):
 
         """ Initialise instance of class. """
 
@@ -28,6 +36,7 @@ class Data:
         self.currency_pair = currency_pair
         self.poloniex_session = []
         self.bid_ask_spread = []
+        self.liquidation_factor = []
 
         if web_flag:
             self.start_poloniex_session()
@@ -42,7 +51,7 @@ class Data:
 
         """ Initiate poloniex session """
 
-        self.poloniex_session = poloniex(poloniex_API_key, poloniex_API_secret)
+        self.poloniex_session = Poloniex()#(poloniex_API_key, poloniex_API_secret)
 
     def candle_input_file(self, filename, period, offset, n_days):
 
@@ -75,29 +84,75 @@ class Data:
 
         """Read candle input from web."""
 
-        candle_json = self.poloniex_session.returnChartData(currency_pair, start, end, period)
+        while True:
+            try:
+                candle_json = self.poloniex_session.returnChartData(currency_pair, period, start=start, end=end)
+                break
+            except Exception as e:
+                print(e)
+                time.sleep(1)
 
-        candle_length = len(candle_json[u'candleStick'])
+        candle_length = len(candle_json)
         self.volume = nan_array_initialise(candle_length)
         self.date = nan_array_initialise(candle_length)
         self.close = nan_array_initialise(candle_length)
         self.open = nan_array_initialise(candle_length)
         self.high = nan_array_initialise(candle_length)
         self.low = nan_array_initialise(candle_length)
+        self.liquidation_factor = np.zeros(candle_length)
 
         for loop_counter in range(candle_length):
-            self.volume[loop_counter] = float(candle_json[u'candleStick'][loop_counter][u'volume'])
-            self.date[loop_counter] = float(candle_json[u'candleStick'][loop_counter][u'date'])
-            self.close[loop_counter] = float(candle_json[u'candleStick'][loop_counter][u'close'])
-            self.open[loop_counter] = float(candle_json[u'candleStick'][loop_counter][u'open'])
-            self.high[loop_counter] = float(candle_json[u'candleStick'][loop_counter][u'high'])
-            self.low[loop_counter] = float(candle_json[u'candleStick'][loop_counter][u'low'])
+            self.volume[loop_counter] = float(candle_json[loop_counter][u'volume'])
+            self.date[loop_counter] = float(candle_json[loop_counter][u'date'])
+            self.close[loop_counter] = float(candle_json[loop_counter][u'close'])
+            self.open[loop_counter] = float(candle_json[loop_counter][u'open'])
+            self.high[loop_counter] = float(candle_json[loop_counter][u'high'])
+            self.low[loop_counter] = float(candle_json[loop_counter][u'low'])
+
+    def candle_update_web(self, time):
+
+        """Update candle data at new time step."""
+
+        start = self.date[-1]
+
+        candle_json = self.poloniex_session.returnChartData(
+            self.currency_pair,
+            self.period,
+            start=start,
+            end=time)
+
+        for loop_counter in range(len(candle_json)):
+
+            date = float(candle_json[loop_counter][u'date'])
+
+            if date > start:
+                self.volume= np.append(self.volume, float(candle_json[loop_counter][u'volume']))
+                self.date = np.append(self.date, date)
+                self.close = np.append(self.close, float(candle_json[loop_counter][u'close']))
+                self.open = np.append(self.open, float(candle_json[loop_counter][u'open']))
+                self.high = np.append(self.high, float(candle_json[loop_counter][u'high']))
+                self.low = np.append(self.low, float(candle_json[loop_counter][u'low']))
+                self.liquidation_factor= np.append(self.liquidation_factor, 0)
+
+    def spread_update_ticker(self):
+
+        """Update spread data using ticker."""
+
+        ticker = self.poloniex_session.returnTicker()
+
+        pair_ticker = ticker.get(self.currency_pair)
+
+        self.liquidation_factor[-1] = (float(pair_ticker.get('lowestAsk')) - self.close[-1]) / self.close[-1]
+
+        self.close[-1] = pair_ticker.get(float(pair_ticker.get('highestBid')))
+        self.open[-1] = self.close[-2]
 
     def calculate_price_quotient(self):
 
         """ Calculate quotient of opening and closing prices"""
 
         self.price_quotient = self.close / self.open
+
 
 def nan_array_initialise(size):
 
@@ -122,3 +177,27 @@ def train_validation_test_indices(input_data, ratios):
     test_indices_local = range(validation_indices_local[-1] + 1, data_length)
 
     return train_indices_local, validation_indices_local, test_indices_local
+
+
+def bid_ask_spread(ticker_list, limit=10):
+
+    """Retrieve current bid ask spread from exchange for particular cryptocurrencies"""
+
+    polo = Poloniex()
+
+    ticker = polo.returnTicker()
+
+    bid_ask_vector = np.zeros((len(ticker_list)))
+
+    for idx, pair in enumerate(ticker_list):
+        if pair != "USDT":
+            pair_ticker = ticker.get(pair)
+
+            bid_ask_vector[idx]\
+                += (pair_ticker.get('lowestAsk') - pair_ticker.get('highestBid'))\
+                   / (limit * pair_ticker.get('highestBid'))
+
+    return bid_ask_vector
+
+
+

@@ -23,7 +23,7 @@ def trim_input_arrays_to_same_length(data_object_list):
     return data_object_list
 
 
-def build_price_arrays(data_object_list, time_lag=50):
+def build_price_arrays(data_object_list, time_lag=50, internal_offset=2):
 
     """ Build array of currency prices """
 
@@ -32,8 +32,7 @@ def build_price_arrays(data_object_list, time_lag=50):
     price_array_training\
         = np.ones((len(data_object_list[0].close) - time_lag, len(data_object_list), time_lag, 3))
 
-    price_array \
-        = np.ones((len(data_object_list[0].close) - time_lag, len(data_object_list)))
+    liquidation_factor_array = np.zeros((len(data_object_list[0].close), len(data_object_list) + 1))
 
     for idx, data_object in enumerate(data_object_list):
 
@@ -45,22 +44,30 @@ def build_price_arrays(data_object_list, time_lag=50):
             price_array_training[:, idx, time, 2] = data_object.high[time:-(time_lag - time)]\
                                                     / data_object.open[time:-(time_lag - time)]
 
-    price_array = price_array_training[1:, :, 0, 0]
-    price_array_training = price_array_training[:-1, :, :, :]
+    usdt_array = np.ones(price_array_training[:, 0, :, :].shape)
+    usdt_array = usdt_array[:, np.newaxis, :, :]
 
-    return price_array, price_array_training
+    price_array_training = np.concatenate(
+        (price_array_training,
+         usdt_array),
+        axis=1)
+
+    price_array = price_array_training[internal_offset:, :, -1, 0]
+    price_array_training = price_array_training[:-internal_offset, :, :, :]
+
+    return price_array, price_array_training, liquidation_factor_array[(time_lag+ internal_offset):, :]
 
 
 def calculate_portfolio_value_backend(
         portfolio_array,
         price_array,
-        transaction_fee=0.0025):
+        transaction_fee=0.003):
 
     """ Calculate the value of a portfolio for given prices and portfolio vectors """
 
     portfolio_change = portfolio_array[1:, :] - portfolio_array[:-1, :]
 
-    shrinking_factor = 1 - K.abs(portfolio_change) * transaction_fee
+    shrinking_factor = (1 - K.abs(portfolio_change) * transaction_fee)
 
     shrinking_factor = K.concatenate((K.ones((1, K.shape(shrinking_factor)[1])), shrinking_factor), axis=0)
 
@@ -76,13 +83,13 @@ def calculate_portfolio_value_backend(
 def calculate_portfolio_value(
         portfolio_array,
         price_array,
-        transaction_fee=0.0025):
+        transaction_fee=0.003):
 
     """ Calculate the value of a portfolio for given prices and portfolio vectors """
 
     portfolio_change = portfolio_array[1:, :] - portfolio_array[:-1, :]
 
-    shrinking_factor = 1 - np.abs(portfolio_change) * transaction_fee
+    shrinking_factor = (1 - np.abs(portfolio_change) * transaction_fee)
 
     shrinking_factor = np.concatenate((np.ones((1, shrinking_factor.shape[1])), shrinking_factor), axis=0)
 

@@ -6,12 +6,11 @@ The script is inspired by both the pytrader project https://github.com/owocki/py
 The information in this repository is provided for information purposes only. The Information is not intended to be and does not constitute financial advice or any other advice, is general in nature and not specific to you.
 
 ## Project Status
-I have implemented a working profitable portfolio manager using deep reinforcement learning with a convolutional neural network in Keras. The model learns slowly to ensure generalization and requires a total of > 5E6 training steps for initial training.
+I have implemented a working profitable portfolio manager using deep reinforcement learning with a convolutional neural network in Keras. 
 
 I can achieve consistent profitability after fees with the current implementation of the current system, at a number of time offsets, indicating the system is not overfitting.
-![Alt text](fitting_example1.png?raw=true "Optional Title")
-![Alt text](fitting_example2.png?raw=true "Optional Title")
-![Alt text](fitting_example3.png?raw=true "Optional Title")
+![Alt text](Fitting_Example 1.png?raw=true "Optional Title")
+![Alt text](Fitting_Example 2.png?raw=true "Optional Title")
 
 
 ## Input Data
