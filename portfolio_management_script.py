@@ -87,8 +87,6 @@ if __name__ == "__main__":
 
         test_prices = price_array[test_indices, :]
 
-        print(fitting_dictionary['fitted_strategy_score'])
-
         portfolio_value, cum_log_return = calculate_portfolio_value(
             fitting_dictionary['fitted_strategy_score'],
             test_prices,
@@ -112,10 +110,6 @@ if __name__ == "__main__":
         other_prices = np.cumprod(price_array[initial_idx:(idx+1), :], axis=0)
 
         plot_portfolio_value.append(running_portfolio_value)
-
-        # TEST
-        print(fitting_dictionary['fitted_strategy_score'])
-        print(np.sum(fitting_dictionary['fitted_strategy_score']))
 
         ax.clear()
         ax.plot(plot_time, plot_portfolio_value, label='Portfolio value')
