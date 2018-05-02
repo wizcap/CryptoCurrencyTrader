@@ -91,24 +91,11 @@ def calculate_portfolio_value(
 
     portfolio_change = portfolio_array[1:, :] - portfolio_array[:-1, :]
 
-    print(liquidation_factor.shape)
-
-    #liquidation_factor = liquidation_factor[1:, :]
-
-    print(liquidation_factor.shape)
-    print(portfolio_change.shape)
-
-    #liquidation_factor = liquidation_factor[-len(portfolio_change):, :]
-
     liquidation_factor[portfolio_change > 0] = 0
 
     shrinking_factor = (1 - np.abs(portfolio_change) * transaction_fee) * (1 - liquidation_factor)
 
     shrinking_factor = np.concatenate((np.ones((1, shrinking_factor.shape[1])), shrinking_factor), axis=0)
-
-    print(portfolio_array.shape)
-    print(shrinking_factor.shape)
-    print(price_array.shape)
 
     portfolio_value_temp = portfolio_array * shrinking_factor * price_array
 
