@@ -55,7 +55,7 @@ def build_price_arrays(data_object_list, time_lag=50, internal_offset=2):
     price_array = price_array_training[internal_offset:, :, -1, 0]
     price_array_training = price_array_training[:-internal_offset, :, :, :]
 
-    return price_array, price_array_training, liquidation_factor_array[(time_lag+ internal_offset):, :]
+    return price_array, price_array_training, liquidation_factor_array[(internal_offset + time_lag):, :]
 
 
 def calculate_portfolio_value_backend(
@@ -83,15 +83,32 @@ def calculate_portfolio_value_backend(
 def calculate_portfolio_value(
         portfolio_array,
         price_array,
+        liquidation_factor,
+
         transaction_fee=0.003):
 
     """ Calculate the value of a portfolio for given prices and portfolio vectors """
 
     portfolio_change = portfolio_array[1:, :] - portfolio_array[:-1, :]
 
-    shrinking_factor = (1 - np.abs(portfolio_change) * transaction_fee)
+    print(liquidation_factor.shape)
+
+    #liquidation_factor = liquidation_factor[1:, :]
+
+    print(liquidation_factor.shape)
+    print(portfolio_change.shape)
+
+    #liquidation_factor = liquidation_factor[-len(portfolio_change):, :]
+
+    liquidation_factor[portfolio_change > 0] = 0
+
+    shrinking_factor = (1 - np.abs(portfolio_change) * transaction_fee) * (1 - liquidation_factor)
 
     shrinking_factor = np.concatenate((np.ones((1, shrinking_factor.shape[1])), shrinking_factor), axis=0)
+
+    print(portfolio_array.shape)
+    print(shrinking_factor.shape)
+    print(price_array.shape)
 
     portfolio_value_temp = portfolio_array * shrinking_factor * price_array
 

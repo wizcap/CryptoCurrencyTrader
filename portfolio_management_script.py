@@ -52,7 +52,7 @@ if __name__ == "__main__":
 
     plot_time = []
     plot_prices = []
-    plot_portfolio_value = []
+    portfolio_allocations = []
     other_prices = []
 
     f, ax = plt.subplots(1, 1)
@@ -67,14 +67,17 @@ if __name__ == "__main__":
         test_indices = [idx]
 
         if idx == int(len(price_array) / 2):
-
             cnn_kwargs = {
                 'retrain': 80,
             }
+
         else:
+            fit_kwargs = {}  # 'steps_per_epoch': 85}
+
             cnn_kwargs = {
                 'retrain': 5,
-                'load_net': 'model.h5'
+                'fit_kwargs': fit_kwargs,
+                'load_net': '/outputs/model.h5'
             }
 
         fitting_dictionary = tensorflow_cnn_fitting(
@@ -85,38 +88,43 @@ if __name__ == "__main__":
             price_array,
             **cnn_kwargs)
 
-        test_prices = price_array[test_indices, :]
+        print(fitting_dictionary['fitted_strategy_score'])
 
-        portfolio_value, cum_log_return = calculate_portfolio_value(
-            fitting_dictionary['fitted_strategy_score'],
-            test_prices,
-            liquidation_factor[test_indices, :])
+        if len(portfolio_allocations) != 0:
+            portfolio_allocations = np.vstack([portfolio_allocations, fitting_dictionary['fitted_strategy_score']])
+        else:
+            portfolio_allocations = fitting_dictionary['fitted_strategy_score']
 
-        final_portfolio_value = portfolio_value[-1]
-        running_portfolio_value *= final_portfolio_value
+        plot_portfolio_value, cum_log_return = calculate_portfolio_value(
+            portfolio_allocations,
+            price_array[initial_idx:(idx + 1), :],
+            liquidation_factor[(initial_idx + 1):(idx + 1), :])
 
         print('Backtest step ', idx - initial_idx, ' of ', run_length)
-        print('Run profit fraction: ', final_portfolio_value - 1)
-        print('Offset tests cumulative profit fraction:', running_portfolio_value - 1)
+        if len(plot_portfolio_value) != 0:
+            print('Cumulative profit fraction:', plot_portfolio_value[-1] - 1)
         print()
 
         if plot_time:
-            plot_time.append(plot_time[-1] + 1/48.0)
+            plot_time.append(plot_time[-1] + 1 / 48.0)
         else:
-            plot_time.append(1/48.0)
+            plot_time.append(1 / 48.0)
 
-        plot_prices = np.cumprod(price_array[initial_idx:(idx+1), 0], axis=0)
+        plot_prices = np.cumprod(price_array[initial_idx:(idx + 1), 0], axis=0)
 
-        other_prices = np.cumprod(price_array[initial_idx:(idx+1), :], axis=0)
+        other_prices = np.cumprod(price_array[initial_idx:(idx + 1), :], axis=0)
 
-        plot_portfolio_value.append(running_portfolio_value)
+        # TEST
+        print(fitting_dictionary['fitted_strategy_score'])
+        print(np.sum(fitting_dictionary['fitted_strategy_score']))
 
-        ax.clear()
-        ax.plot(plot_time, plot_portfolio_value, label='Portfolio value')
-        ax.plot(plot_time, plot_prices, label='Reference Asset Price')
-        ax.set(xlabel='Time (days)', ylabel='Fractional Value')
-        ax.set_title('Fractional Portfolio Value')
-        ax.legend(handles=ax.lines, labels=["Portfolio Value", "Reference Asset Price"])
+        if len(plot_portfolio_value) != 0:
+            ax.clear()
+            ax.plot(plot_time, plot_portfolio_value, label='Portfolio value')
+            ax.plot(plot_time, plot_prices, label='Reference Asset Price')
+            ax.set(xlabel='Time (days)', ylabel='Fractional Value')
+            ax.set_title('Fractional Portfolio Value')
+            ax.legend(handles=ax.lines, labels=["Portfolio Value", "Reference Asset Price"])
 
         ax2.clear()
         for price, label in zip(other_prices.T, ticker_list):
@@ -131,6 +139,7 @@ if __name__ == "__main__":
 
 pickle.dump({'portfolio_value': plot_portfolio_value, 'prices': plot_prices}, open("backtest_data.pkl", "wb"))
 plt.show()
+
 
 
 

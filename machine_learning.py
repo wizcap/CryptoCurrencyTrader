@@ -79,7 +79,7 @@ def tensorflow_cnn_fitting(
             epochs=epochs,
             **fit_kwargs)
 
-        model.save(os.getcwd() + 'model.h5')
+        model.save(os.getcwd() + '/outputs/model.h5')
 
     training_strategy_score = model.predict(train_data)
     fitted_strategy_score = model.predict(test_data)
@@ -120,6 +120,9 @@ def custom_loss(y_true, y_pred):
     _, cum_log_return = calculate_portfolio_value_backend(y_pred, y_true)
 
     return 1 - cum_log_return
+
+
+
 
 
 
