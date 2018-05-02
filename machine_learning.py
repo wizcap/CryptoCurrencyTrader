@@ -79,7 +79,7 @@ def tensorflow_cnn_fitting(
             epochs=epochs,
             **fit_kwargs)
 
-        model.save(os.getcwd() + '/outputs/model.h5')
+        model.save(os.getcwd() + 'model.h5')
 
     training_strategy_score = model.predict(train_data)
     fitted_strategy_score = model.predict(test_data)

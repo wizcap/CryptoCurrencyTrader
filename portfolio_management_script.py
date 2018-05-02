@@ -68,16 +68,16 @@ if __name__ == "__main__":
 
         if idx == int(len(price_array) / 2):
             cnn_kwargs = {
-                'retrain': 80,
+                'retrain': 1,
             }
 
         else:
             fit_kwargs = {}  # 'steps_per_epoch': 85}
 
             cnn_kwargs = {
-                'retrain': 5,
+                'retrain': 1,
                 'fit_kwargs': fit_kwargs,
-                'load_net': '/outputs/model.h5'
+                'load_net': 'model.h5'
             }
 
         fitting_dictionary = tensorflow_cnn_fitting(
