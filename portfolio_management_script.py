@@ -38,7 +38,8 @@ if __name__ == "__main__":
 
     price_array, price_array_training, liquidation_factor = build_price_arrays(
         input_data,
-        time_lag=TIME_LAG)
+        time_lag=TIME_LAG,
+	internal_offset=1)
 
     ticker_list.append('USDT')
 
