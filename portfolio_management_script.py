@@ -69,11 +69,11 @@ if __name__ == "__main__":
 
         if idx == int(len(price_array) / 2):
             cnn_kwargs = {
-                'retrain': 1,
+                'retrain': 80,
             }
 
         else:
-            fit_kwargs = {}  # 'steps_per_epoch': 85}
+            fit_kwargs = {'steps_per_epoch': 85}
 
             cnn_kwargs = {
                 'retrain': 1,

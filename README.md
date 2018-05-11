@@ -1,6 +1,6 @@
 # CryptoCurrencyTrader
 A machine learning program in python to generate cryptocurrency portfolio allocations using machine learning.
-The script is inspired by both the pytrader project https://github.com/owocki/pytrader, the following paper https://arxiv.org/abs/1706.10059.
+The script is inspired by both the pytrader project https://github.com/owocki/pytrader, the following paper https://arxiv.org/abs/1706.10059. This implementation differs from the paper itself in that I use the keras/tensorflow backend to append cash bias to the portfolio vectors and implement the portfolio vector memory entirely within a loss function, reducing the complexity of the trained network, by reducing the number of independent input variables.
 
 # Disclaimer
 The information in this repository is provided for information purposes only. The Information is not intended to be and does not constitute financial advice or any other advice, is general in nature and not specific to you.

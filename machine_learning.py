@@ -36,19 +36,20 @@ def tensorflow_cnn_fitting(
     train_price = price_data[train_indices, :]
 
     conv1 = Conv2D(
-        3,
-        (1, 4),
+        2,
+        (1, 3),
         activation='relu',)(input1)
     conv2 = Conv2D(
         10,
-        (1, input_size[2] - 3),
+        (1, input_size[2] - 2),
         activation='relu',
         kernel_regularizer=l2(5E-9))(conv1)
     conv3 = Conv2D(
         1,
         (1, 1),
         activation='relu',
-        kernel_regularizer=l2(5E-8))(conv2)
+        kernel_regularizer=l2(5E-8),
+        padding='valid')(conv2)
     flat1 = Flatten()(conv3)
     preds = Activation('softmax')(flat1)
 
