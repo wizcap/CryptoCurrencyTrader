@@ -107,8 +107,8 @@ def random_fit_generator(data, labels, batch_size, sample_bias=5E-5):
 
     while True:
         slice_start = data_length\
-                      - int(data_length * np.log(np.random.random())
-                          / np.log(sample_bias * (1 - sample_bias)))\
+                      - int(data_length * np.log(np.random.random() / sample_bias)
+                          / np.log((1 - sample_bias)))\
                       - batch_size - 1
 
         yield data[slice_start:slice_start+batch_size, :, :, :], labels[slice_start:slice_start+batch_size]
