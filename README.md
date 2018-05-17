@@ -1,27 +1,26 @@
 # CryptoCurrencyTrader
 A machine learning program in python to generate cryptocurrency portfolio allocations using machine learning.
-The script is inspired by both the pytrader project https://github.com/owocki/pytrader, the following paper https://arxiv.org/abs/1706.10059. This implementation differs from the paper itself in that I use the keras/tensorflow backend to append cash bias to the portfolio vectors and implement the portfolio vector memory entirely within a loss function, reducing the complexity of the trained network, by reducing the number of independent input variables.
+I was inspired to create this script by both the pytrader project https://github.com/owocki/pytrader, the following paper https://arxiv.org/abs/1706.10059. This implementation differs from the paper itself in that I use the keras/tensorflow backend to implement the portfolio vector memory entirely within a loss function, reducing the complexity of the trained network, by reducing the number of independent input variables.
 
 # Disclaimer
-The information in this repository is provided for information purposes only. The Information is not intended to be and does not constitute financial advice or any other advice, is general in nature and not specific to you.
+I provide the information in this repository for information purposes only. The Information is not intended to be and does not constitute financial advice or any other advice, is general and not specific to you.
 
 ## Project Status
-I have implemented a working profitable portfolio manager using deep reinforcement learning with a convolutional neural network in Keras. 
+This implementation of the CNN in Keras for the portfolio management problem from this paper https://arxiv.org/abs/1706.10059, shows profitability up until around February 2018. I believe this is a similar issue as it experienced by the original authors of the paper https://github.com/ZhengyaoJiang/PGPortfolio/issues/63, arising due to competition with other deep learning systems and market conditions. I cannot extend this repo beyond the public domain content of the paper due to being bound by non-disclosure agreements.
 
-I can achieve consistent profitability after fees with the current implementation of the current system, at a number of time offsets, indicating the system is not overfitting.
+
 ![Alt text](FittingExample1.png?raw=true "Optional Title")
 ![Alt text](FittingExample2.png?raw=true "Optional Title")
 
 
 ## Input Data
-Minor changes were made to the Poloniex API python wrapper which is inluded in the repository https://github.com/s4w3d0ff/python-poloniex. Data is retrieved via the Poloniex API in OHLC (open, high, low, close) candlestick format along with volume data.
-Data can also be provided as .csv files in the unixtime, open, high, low, close format.
+Data is retrieved via the Poloniex API in OHLC (open, high, low, close) candlestick format along with volume data.
 
 ### Training Inputs
-Open, high, low close prices at a series of prior times are provided to the solver.
+The Poloniex API provides Open, high, low close prices at a series of prior times to the solver.
 
 ## Validation
-In order to estimate the amount of overfitting, a series of offset training runs are performed. If the trading strategy is not overfit, fitting should be approximately consistent across at all offsets in terms of profit fraction and fitting error.
+A series of offset training runs estimate the amount of overfitting. If there is no overfitting, fitting should be approximately consistent across at all offsets when measured by profit fraction and fitting error.
 
 #Setup
 To run as a standalone script add a file named API_settings.py containing your poloniex API:
