@@ -65,6 +65,8 @@ def calculate_portfolio_value_backend(
 
     """ Calculate the value of a portfolio for given prices and portfolio vectors """
 
+    portfolio_array /= (K.expand_dims(K.sum(portfolio_array, axis=1)))
+
     portfolio_change = portfolio_array[1:, :] - portfolio_array[:-1, :]
 
     shrinking_factor = (1 - K.abs(portfolio_change) * transaction_fee)
@@ -88,6 +90,8 @@ def calculate_portfolio_value(
         transaction_fee=0.003):
 
     """ Calculate the value of a portfolio for given prices and portfolio vectors """
+
+    portfolio_array /= np.expand_dims(np.sum(portfolio_array, axis=1), axis=-1)
 
     portfolio_change = portfolio_array[1:, :] - portfolio_array[:-1, :]
 
