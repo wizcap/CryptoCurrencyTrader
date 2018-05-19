@@ -115,10 +115,6 @@ if __name__ == "__main__":
 
         other_prices = np.cumprod(price_array[initial_idx:(idx + 1), :], axis=0)
 
-        # TEST
-        print(fitting_dictionary['fitted_strategy_score'])
-        print(np.sum(fitting_dictionary['fitted_strategy_score']))
-
         if len(plot_portfolio_value) != 0:
             ax.clear()
             ax.plot(plot_time, plot_portfolio_value, label='Portfolio value')
