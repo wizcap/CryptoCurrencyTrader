@@ -67,7 +67,7 @@ def calculate_portfolio_value_backend(
 
     portfolio_change = portfolio_array[1:, :] - portfolio_array[:-1, :]
 
-    shrinking_factor = 1 + K.abs(portfolio_change) * (1 - transaction_fee) / portfolio_array
+    shrinking_factor = 1 + K.abs(portfolio_change) * (1 - transaction_fee) / portfolio_array[:-1, :]
 
     shrinking_factor = K.concatenate((K.ones((1, K.shape(shrinking_factor)[1])), shrinking_factor), axis=0)
 
@@ -93,7 +93,7 @@ def calculate_portfolio_value(
 
     liquidation_factor[portfolio_change > 0] = 0
 
-    shrinking_factor = 1 + np.abs(portfolio_change) * (1 - transaction_fee - liquidation_factor) / portfolio_array
+    shrinking_factor = 1 + np.abs(portfolio_change) * (1 - transaction_fee - liquidation_factor) / portfolio_array[:-1, :]
 
     shrinking_factor = np.concatenate((np.ones((1, shrinking_factor.shape[1])), shrinking_factor), axis=0)
 
