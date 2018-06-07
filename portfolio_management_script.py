@@ -36,10 +36,10 @@ if __name__ == "__main__":
             Data(ticker, 1800, True, start=current_time - TIME_LENGTH - OFFSET, end=current_time - OFFSET))
         print('Complete')
 
-    price_array, price_array_training, liquidation_factor = build_price_arrays(
+    price_array, price_array_training = build_price_arrays(
         input_data,
         time_lag=TIME_LAG,
-	internal_offset=1)
+	    internal_offset=1)
 
     ticker_list.append('USDT')
 
@@ -98,8 +98,7 @@ if __name__ == "__main__":
 
         plot_portfolio_value, cum_log_return = calculate_portfolio_value(
             portfolio_allocations,
-            price_array[initial_idx:(idx + 1), :],
-            liquidation_factor[(initial_idx + 1):(idx + 1), :])
+            price_array[initial_idx:(idx + 1), :])
 
         print('Backtest step ', idx - initial_idx, ' of ', run_length)
         if len(plot_portfolio_value) != 0:
